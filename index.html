@@ -16,11 +16,15 @@
         .app-container { background-color: #ffffff; border-radius: 24px; padding: 24px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); width: 100%; max-width: 600px; text-align: center; }
         .title-header { font-family: 'Baloo 2', cursive; color: #2563eb; font-size: 2.5rem; margin-bottom: 16px; }
         .character-area { margin-bottom: 16px; position: relative; height: 130px; }
-        .character-image { width: 80px; height: 80px; background-color: #93c5fd; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 2.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s ease; }
+        .character-image { width: 80px; height: 80px; background-color: #93c5fd; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 2.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s ease, background-color 0.3s; }
         .character-image.happy { transform: scale(1.1) rotate(5deg); }
         .character-image.thinking { transform: scale(1.05) rotate(-3deg); }
         .character-image.confused { animation: shake 0.5s; }
         .character-image.celebrate { animation: celebrate_anim 0.8s ease-in-out; }
+        .character-image.amused { transform: scale(1.05); background-color: #bae6fd; } /* For silly words */
+        .character-image.extra-happy { transform: scale(1.15) rotate(8deg); background-color: #7dd3fc; } /* For polite words */
+
+
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
         @keyframes celebrate_anim { 0% { transform: scale(1) rotate(0deg); } 25% { transform: scale(1.2) rotate(-10deg); } 50% { transform: scale(1.1) rotate(10deg); } 75% { transform: scale(1.2) rotate(-5deg); } 100% { transform: scale(1) rotate(0deg); } }
         .speech-bubble { background-color: #e0f2fe; color: #0c4a6e; padding: 10px 14px; border-radius: 16px; position: relative; display: inline-block; max-width: 90%; min-height: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 0.85rem; }
@@ -189,13 +193,22 @@
             let currentMathStreak = 0, successfulPrompts = 0, correctMathAnswers = 0;
             let currentUser = null;
 
-            function getInitialAchievementsState() { /* ... same ... */ 
+            function getInitialAchievementsState() { 
                  return JSON.parse(JSON.stringify({ PROMPT_ROOKIE: { id: 'PROMPT_ROOKIE', name: "🚀 Prompt Rookie!", condition: () => successfulPrompts >= 5, earned: false, count:0, needed: 5, type: 'prompt'}, MATH_BEGINNER: { id: 'MATH_BEGINNER', name: "➕ Math Beginner!", condition: () => correctMathAnswers >= 10, earned: false, count:0, needed: 10, type: 'math'}, SCORE_HERO_100: { id: 'SCORE_HERO_100', name: "💯 Score Hero: 100!", condition: () => score >= 100, earned: false, type: 'score', needed: 100}, LEVEL_UP_STAR_2: { id: 'LEVEL_UP_STAR_2', name: "⭐ Level 2 Star!", condition: () => level >= 2, earned: false, type: 'level', needed: 2}, TABLE_MASTER_2S: { id: 'TABLE_MASTER_2S', name: "🥈 Table Master: 2s!", targetTable: 2, count: 0, needed: 3, earned: false, type: 'table'}, TABLE_MASTER_5S: { id: 'TABLE_MASTER_5S', name: "🏅 Table Master: 5s!", targetTable: 5, count: 0, needed: 3, earned: false, type: 'table'} }));
             }
             let achievements = getInitialAchievementsState();
-            const characterEmojis = { /* ... same ... */ idle: '🧠', thinking: '🤔', happy: '🥳', confused: '😕', correct: '🤩', celebrate: '🎉' };
-            const problemsByLevel = { /* ... same ... */ 1: [ { num1: 2, num2: 3 }, { num1: 5, num2: 2 }, { num1: 10, num2: 4}], 2: [ { num1: 3, num2: 4 }, { num1: 4, num2: 5 }, { num1: 6, num2: 3 }], 3: [ { num1: 7, num2: 3 }, { num1: 8, num2: 4 }, { num1: 9, num2: 2 }], 4: [ { num1: 11, num2: 2 }, { num1: 12, num2: 3 }, { num1: 11, num2: 5 }], 5: [ { num1: 7, num2: 11 }, { num1: 9, num2: 12 }, { num1: 12, num2: 12 }] };
-            const promptTipsByLevel = { /* ... same ... */ 1:["Tip L1"], 2:["Tip L2"], 3:["Tip L3"], 4:["Tip L4"], 5:["Tip L5"]};
+            const characterEmojis = { 
+                idle: '🧠', thinking: '🤔', happy: '🥳', confused: '😕', 
+                correct: '🤩', celebrate: '🎉', amused: '😜', extraHappy: '🥰' // New emojis
+            };
+            const problemsByLevel = { 1: [ { num1: 2, num2: 3 }, { num1: 5, num2: 2 }, { num1: 10, num2: 4}], 2: [ { num1: 3, num2: 4 }, { num1: 4, num2: 5 }, { num1: 6, num2: 3 }], 3: [ { num1: 7, num2: 3 }, { num1: 8, num2: 4 }, { num1: 9, num2: 2 }], 4: [ { num1: 11, num2: 2 }, { num1: 12, num2: 3 }, { num1: 11, num2: 5 }], 5: [ { num1: 7, num2: 11 }, { num1: 9, num2: 12 }, { num1: 12, num2: 12 }] };
+            const promptTipsByLevel = { 1:["Tip L1: Be clear!"], 2:["Tip L2: Use 'solve'!"], 3:["Tip L3: Find numbers in stories!"], 4:["Tip L4: Try 11s & 12s!"], 5:["Tip L5: You're a pro!"]};
+
+            // Flavor words for prompts
+            const politeWords = ["please", "kindly", "thank you", "thanks"];
+            const sillyWords = ["banana", "unicorn", "pickle", "rocket", "sparkle", "fluffy", "wacky"];
+            const enthusiasmWords = ["super", "mega", "ultra", "awesome", "fantastic", "amazing"];
+
 
             async function saveUserProgress(userId) {
                 if (!userId) { console.log("saveUserProgress: No userId provided."); return; }
@@ -203,7 +216,6 @@
                 try {
                     await db.collection('userProgress').doc(userId).set(progressData, { merge: true });
                     console.log("Progress saved for user:", userId);
-                    // After saving general progress, update leaderboard entry
                     await updateLeaderboardEntry(userId, score, currentUser.displayName || currentUser.email.split('@')[0]);
                 } catch (error) { console.error("Error saving progress:", error); }
             }
@@ -221,47 +233,28 @@
                             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                         });
                         console.log(`Leaderboard updated for ${displayName} with score ${currentScore}`);
-                        await loadLeaderboard(); // Refresh leaderboard display after update
+                        await loadLeaderboard(); 
                     }
-                } catch (error) {
-                    console.error("Error updating leaderboard:", error);
-                }
+                } catch (error) { console.error("Error updating leaderboard:", error); }
             }
 
             async function loadLeaderboard() {
-                if (!currentUser) { // Don't load if no user is logged in
-                     leaderboardContainer.style.display = 'none';
-                     return;
-                }
-                leaderboardContainer.style.display = 'block'; // Show it when loading
-                leaderboardList.innerHTML = '<li>Loading...</li>'; // Placeholder
+                if (!currentUser) { leaderboardContainer.style.display = 'none'; return; }
+                leaderboardContainer.style.display = 'block'; 
+                leaderboardList.innerHTML = '<li>Loading...</li>'; 
                 try {
-                    const snapshot = await db.collection('leaderboard')
-                                           .orderBy('score', 'desc')
-                                           .limit(10) // Get top 10
-                                           .get();
-                    leaderboardList.innerHTML = ''; // Clear previous entries
-                    if (snapshot.empty) {
-                        leaderboardList.innerHTML = '<li>No players on the leaderboard yet!</li>';
-                        return;
-                    }
+                    const snapshot = await db.collection('leaderboard').orderBy('score', 'desc').limit(10).get();
+                    leaderboardList.innerHTML = ''; 
+                    if (snapshot.empty) { leaderboardList.innerHTML = '<li>No players on the leaderboard yet!</li>'; return; }
                     let rank = 1;
                     snapshot.forEach(doc => {
                         const data = doc.data();
                         const listItem = document.createElement('li');
-                        listItem.innerHTML = `
-                            <span class="rank">#${rank++}</span>
-                            <span class="name">${data.displayName || 'Anonymous'}</span>
-                            <span class="score">${data.score} pts</span>
-                        `;
+                        listItem.innerHTML = `<span class="rank">#${rank++}</span> <span class="name">${data.displayName || 'Anonymous'}</span> <span class="score">${data.score} pts</span>`;
                         leaderboardList.appendChild(listItem);
                     });
-                } catch (error) {
-                    console.error("Error loading leaderboard:", error);
-                    leaderboardList.innerHTML = '<li>Error loading leaderboard.</li>';
-                }
+                } catch (error) { console.error("Error loading leaderboard:", error); leaderboardList.innerHTML = '<li>Error loading leaderboard.</li>'; }
             }
-
 
             async function loadUserProgress(userId) { 
                 if (!userId) { resetLocalGameState(); updateUIFromState(); generateProblem(); return; }
@@ -278,14 +271,12 @@
                                 achievements[key].count = loadedAchievements[key].count || 0;
                             }
                         }
-                        console.log("Progress loaded:", data);
                     } else {
-                        console.log("No progress for new user, saving initial state.");
-                        resetLocalGameState(); await saveUserProgress(userId); // saveUserProgress will also call updateLeaderboardEntry
+                        resetLocalGameState(); await saveUserProgress(userId); 
                     }
                 } catch (error) { console.error("Error loading progress:", error); resetLocalGameState(); }
                 updateUIFromState();
-                await loadLeaderboard(); // Load leaderboard after user progress is loaded/set
+                await loadLeaderboard(); 
                 generateProblem();
             }
             function updateUIFromState() { updateScoreDisplay(); updateStreakDisplay(); updatePromptTips(); }
@@ -293,22 +284,22 @@
             signUpButton.addEventListener('click', () => { 
                 const email = emailInput.value; const password = passwordInput.value; authErrorDiv.textContent = ""; authMessageDiv.textContent = "";
                  auth.createUserWithEmailAndPassword(email, password)
-                    .then((userCredential) => { console.log("Signed up:", userCredential.user); authMessageDiv.textContent = "Sign up successful! You are now logged in."; })
+                    .then((userCredential) => { authMessageDiv.textContent = "Sign up successful! You are now logged in."; })
                     .catch((error) => { authErrorDiv.textContent = error.message; });
             });
             loginButton.addEventListener('click', () => { 
                 const email = emailInput.value; const password = passwordInput.value; authErrorDiv.textContent = ""; authMessageDiv.textContent = "";
                 auth.signInWithEmailAndPassword(email, password)
-                    .then((userCredential) => { console.log("Logged in:", userCredential.user); authMessageDiv.textContent = "Login successful!"; })
+                    .then((userCredential) => { authMessageDiv.textContent = "Login successful!"; })
                     .catch((error) => { authErrorDiv.textContent = error.message; });
             });
             googleSignInButton.addEventListener('click', () => { 
                 const provider = new firebase.auth.GoogleAuthProvider(); authErrorDiv.textContent = ""; authMessageDiv.textContent = "";
                 auth.signInWithPopup(provider)
-                    .then((result) => { console.log("Google Sign-In successful:", result.user); authMessageDiv.textContent = "Google Sign-In successful!";})
+                    .then((result) => { authMessageDiv.textContent = "Google Sign-In successful!";})
                     .catch((error) => { authErrorDiv.textContent = `Google Sign-In Error: ${error.message}`; });
             });
-            forgotPasswordLink.addEventListener('click', (e) => { /* ... same ... */ 
+            forgotPasswordLink.addEventListener('click', (e) => { 
                 e.preventDefault(); const email = emailInput.value; authErrorDiv.textContent = ""; authMessageDiv.textContent = "";
                 if (!email) { authErrorDiv.textContent = "Please enter your email address."; return; }
                 auth.sendPasswordResetEmail(email)
@@ -316,8 +307,8 @@
                     .catch((error) => { authErrorDiv.textContent = `Error: ${error.message}`; });
             });
             logoutButton.addEventListener('click', async () => { 
-                if (currentUser) { await saveUserProgress(currentUser.uid); } // Save progress before logout
-                auth.signOut().then(() => { console.log("Signed out"); authMessageDiv.textContent = "You have been signed out."; leaderboardContainer.style.display = 'none'; })
+                if (currentUser) { await saveUserProgress(currentUser.uid); } 
+                auth.signOut().then(() => { authMessageDiv.textContent = "You have been signed out."; leaderboardContainer.style.display = 'none'; })
                     .catch((error) => { console.error("Sign out error:", error); });
             });
 
@@ -325,18 +316,14 @@
                 if (user) {
                     currentUser = user;
                     userStatusDiv.textContent = `Signed in as: ${user.displayName || user.email}`;
-                    authContainer.style.display = 'none';
-                    gameContentDiv.style.display = 'block';
+                    authContainer.style.display = 'none'; gameContentDiv.style.display = 'block';
                     authErrorDiv.textContent = ""; authMessageDiv.textContent = "";
                     await loadUserProgress(user.uid); 
                 } else {
-                    currentUser = null;
-                    userStatusDiv.textContent = "You are not signed in.";
-                    authContainer.style.display = 'block';
-                    gameContentDiv.style.display = 'none';
-                    leaderboardContainer.style.display = 'none'; // Hide leaderboard when logged out
-                    resetLocalGameState(); 
-                    updateUIFromState(); 
+                    currentUser = null; userStatusDiv.textContent = "You are not signed in.";
+                    authContainer.style.display = 'block'; gameContentDiv.style.display = 'none';
+                    leaderboardContainer.style.display = 'none'; 
+                    resetLocalGameState(); updateUIFromState(); 
                 }
             });
             
@@ -352,11 +339,10 @@
                 achievementNotification.style.display = 'block';
                 setTimeout(() => { achievementNotification.style.display = 'none'; }, 4000);
                 setCharacterState('celebrate', `Wow! ${achievement.name}`);
-                if (currentUser) saveUserProgress(currentUser.uid); // saveUserProgress will update leaderboard
+                if (currentUser) saveUserProgress(currentUser.uid); 
             }
             function checkAchievements() { 
-                 let newAchievementEarnedThisCheck = false;
-                for (const key in achievements) {
+                 for (const key in achievements) {
                     const ach = achievements[key];
                     if (!ach.earned) {
                         let conditionMet = false;
@@ -364,7 +350,7 @@
                         else if (ach.type === 'math' && correctMathAnswers >= ach.needed) conditionMet = true;
                         else if (ach.type === 'score' && score >= ach.needed) conditionMet = true; 
                         else if (ach.type === 'level' && level >= ach.needed) conditionMet = true; 
-                        if (conditionMet) { ach.earned = true; notifyAchievement(ach); newAchievementEarnedThisCheck = true; }
+                        if (conditionMet) { ach.earned = true; notifyAchievement(ach); }
                     }
                 }
             }
@@ -376,20 +362,53 @@
                         (currentProblem.num1 === ach.targetTable || currentProblem.num2 === ach.targetTable)) {
                         ach.count = (ach.count || 0) + 1;
                         if (ach.count >= ach.needed) { ach.earned = true; notifyAchievement(ach);
-                        } else if (currentUser) { saveUserProgress(currentUser.uid); } // Save updated count
+                        } else if (currentUser) { saveUserProgress(currentUser.uid); } 
                     }
                 }
             }
-            function setCharacterState(state, message = "") { 
+            function setCharacterState(state, message = "", temporaryState = false) { 
+                const originalEmoji = character.textContent;
+                const originalClass = character.className;
+
                 character.textContent = characterEmojis[state] || characterEmojis.idle;
                 character.className = 'character-image'; 
                 if (Object.keys(characterEmojis).includes(state)) { character.classList.add(state); }
-                speechBubble.textContent = message || getDefaultMessageForState(state);
+                
+                if (message) speechBubble.textContent = message;
+                else if (state !== 'idle') speechBubble.textContent = getDefaultMessageForState(state);
+                // If idle, keep existing speech bubble or set default if no specific message
+                else if (!speechBubble.textContent || speechBubble.textContent === getDefaultMessageForState(character.dataset.previousState)) {
+                     speechBubble.textContent = getDefaultMessageForState('idle');
+                }
+
+
+                if (temporaryState) {
+                    setTimeout(() => {
+                        // Revert to a more standard idle/thinking state unless another state change happened
+                        if (character.classList.contains(state)) { // Check if state is still the temporary one
+                           setCharacterState(character.dataset.previousState || 'idle', getDefaultMessageForState(character.dataset.previousState || 'idle'));
+                        }
+                    }, 1500); // Duration for temporary state
+                } else {
+                    character.dataset.previousState = state; // Store current non-temporary state
+                }
             }
-            function getDefaultMessageForState(state) {  
+
+            function getDefaultMessageForState(stateKey) {  
                 let userName = "Friend"; if (currentUser) { userName = currentUser.displayName ? currentUser.displayName.split(' ')[0] : currentUser.email.split('@')[0]; }
-                switch (state) { case 'thinking': return "Hmm..."; case 'happy': return "Got it!"; case 'confused': return "Confused..."; case 'correct': return "Amazing!"; case 'celebrate': return "Woohoo!"; default: return `Hi ${userName}! Let's play!`; }
+                const messages = {
+                    idle: `Hi ${userName}! Ready for a challenge?`,
+                    thinking: "Hmm, let me ponder this...",
+                    happy: "You're doing great!",
+                    confused: "I'm a little puzzled. Can you try again?",
+                    correct: "That's absolutely right!",
+                    celebrate: "Woohoo! Fantastic!",
+                    amused: "Hehe, that's a fun way to ask!",
+                    extraHappy: "Aww, thank you! That's so kind!"
+                };
+                return messages[stateKey] || messages.idle;
             }
+
             function generateProblem() {  
                 if (!currentUser) { return; }
                 const currentMaxLevel = Object.keys(problemsByLevel).length; if (level > currentMaxLevel) level = currentMaxLevel; 
@@ -398,7 +417,9 @@
                 let problemText = `Challenge: ${currentProblem.num1} x ${currentProblem.num2}?`;
                 if (currentProblem.story) { problemText = `Challenge: ${currentProblem.story} (${currentProblem.num1}x${currentProblem.num2}!)`; }
                 problemStatement.textContent = problemText; feedbackArea.textContent = ""; promptInput.value = ""; userAnswerInput.value = "";
-                switchToPromptMode(); setCharacterState('idle'); updateUIFromState(); 
+                switchToPromptMode(); 
+                setCharacterState('idle'); // This will use the default idle message
+                updateUIFromState(); 
             }
             function updatePromptTips() {  
                 const currentMaxLevel = Object.keys(promptTipsByLevel).length; let tipsLevel = level > currentMaxLevel ? currentMaxLevel : level;
@@ -406,10 +427,23 @@
                 currentTips.forEach(tip => { const li = document.createElement('li'); li.textContent = tip; tipsList.appendChild(li); });
             }
             function parsePrompt(promptText) { 
-                promptText = promptText.toLowerCase(); const result = { numbers: [], intent: null, keywords: [], isClear: false };
+                promptText = promptText.toLowerCase(); 
+                const result = { 
+                    numbers: [], intent: null, keywords: [], 
+                    isClear: false, foundPoliteWord: null, foundSillyWord: null, foundEnthusiasmWord: null 
+                };
                 const numberMatches = promptText.match(/\d+/g); if (numberMatches) result.numbers = numberMatches.map(Number);
                 if (promptText.includes('x') || promptText.includes('*') || promptText.includes('times') || promptText.includes('multiply')) result.intent = 'multiply';
-                if (promptText.includes('quickly')) result.keywords.push('quickly'); if (promptText.includes('calculate') || promptText.includes('solve')) result.keywords.push('solve_command');
+                
+                // Check for command/power words
+                if (promptText.includes('quickly') || promptText.includes('fast')) result.keywords.push('quickly'); 
+                if (promptText.includes('calculate') || promptText.includes('solve') || promptText.includes('what is')) result.keywords.push('solve_command');
+                
+                // Check for flavor words
+                politeWords.forEach(word => { if (promptText.includes(word)) result.foundPoliteWord = word; });
+                sillyWords.forEach(word => { if (promptText.includes(word)) result.foundSillyWord = word; });
+                enthusiasmWords.forEach(word => { if (promptText.includes(word)) result.foundEnthusiasmWord = word; });
+
                 if (result.intent === 'multiply' && result.numbers.length >= 2 && currentProblem) {
                     const problemNums = [currentProblem.num1, currentProblem.num2].sort(); const promptNumsSorted = result.numbers.slice(0,2).sort();
                     if (problemNums[0] === promptNumsSorted[0] && problemNums[1] === promptNumsSorted[1]) result.isClear = true;
@@ -419,19 +453,72 @@
             function switchToPromptMode() { gameStage = 'prompting'; promptInput.style.display = 'block'; userAnswerInput.style.display = 'none'; promptInput.focus(); submitButton.textContent = 'Send Prompt!'; }
             
             function handleSubmitPrompt() { 
-                 if (!currentUser || !currentProblem) return; const userPromptText = promptInput.value.trim();
-                if (!userPromptText) { feedbackArea.textContent = "Type a prompt!"; setCharacterState('confused'); return; }
-                setCharacterState('thinking'); feedbackArea.textContent = ""; const parsed = parsePrompt(userPromptText); let promptFeedbackMessage = "";
-                if (!parsed.isClear || parsed.intent !== 'multiply') { promptFeedbackMessage = "Hmm, that prompt wasn't quite right."; setCharacterState('confused', promptFeedbackMessage); feedbackArea.textContent = promptFeedbackMessage; return; }
-                successfulPrompts++; score += 5; if (parsed.keywords.length > 0) { score += 2; promptFeedbackMessage = "Awesome power prompt! "; } else { promptFeedbackMessage = "Great prompt! "; }
-                updateScoreDisplay(); checkAchievements(); // This will call saveUserProgress if an achievement is unlocked
-                // Explicitly save progress here if no achievement was unlocked but score changed
-                if (currentUser && !achievements.SCORE_HERO_100.earned && !achievements.PROMPT_ROOKIE.earned) { // Example condition
-                    saveUserProgress(currentUser.uid); 
+                 if (!currentUser || !currentProblem) return; 
+                 const userPromptText = promptInput.value.trim();
+                if (!userPromptText) { feedbackArea.textContent = "Type a prompt!"; setCharacterState('confused', "You need to give me instructions!"); return; }
+                
+                // Store previous state for potential revert after temporary animation
+                character.dataset.previousState = character.classList.contains('thinking') ? 'thinking' : 'idle';
+
+                setCharacterState('thinking', "Let me see that prompt..."); 
+                feedbackArea.textContent = ""; 
+                const parsed = parsePrompt(userPromptText); 
+                let promptFeedbackMessage = "";
+
+                if (!parsed.isClear || parsed.intent !== 'multiply') { 
+                    promptFeedbackMessage = "Hmm, that prompt wasn't quite right for the math problem. Try to include the numbers and a multiply word!"; 
+                    setCharacterState('confused', promptFeedbackMessage); 
+                    feedbackArea.textContent = promptFeedbackMessage; return; 
                 }
-                feedbackArea.textContent = promptFeedbackMessage + "Now, what's the answer?";
-                setCharacterState('thinking', promptFeedbackMessage + `What is ${currentProblem.num1} x ${currentProblem.num2}?`); switchToAnswerMode();
+                
+                successfulPrompts++; 
+                score += 5; // Base points for a good prompt
+                let characterReactionState = 'happy'; // Default reaction to a good prompt
+
+                if (parsed.keywords.includes('quickly')) {
+                    score += 2; 
+                    promptFeedbackMessage = "Super speedy prompt! ";
+                    characterReactionState = 'extraHappy'; // Or a specific "fast" animation
+                } else if (parsed.keywords.length > 0) { // Other power words
+                    score += 1;
+                    promptFeedbackMessage = "Powerful prompting! ";
+                } else {
+                     promptFeedbackMessage = "Great prompt! ";
+                }
+
+                if (parsed.foundPoliteWord) {
+                    promptFeedbackMessage += `You said "${parsed.foundPoliteWord}"? How kind! `;
+                    setCharacterState('extraHappy', `Aww, you said "${parsed.foundPoliteWord}"! That's nice!`, true);
+                } else if (parsed.foundSillyWord) {
+                    promptFeedbackMessage += `A "${parsed.foundSillyWord}" prompt, eh? Interesting choice! `;
+                    setCharacterState('amused', `"${parsed.foundSillyWord}"? Hehe, okay!`, true);
+                } else if (parsed.foundEnthusiasmWord) {
+                     promptFeedbackMessage += `Wow, such enthusiasm with "${parsed.foundEnthusiasmWord}"! `;
+                     setCharacterState('celebrate', `"${parsed.foundEnthusiasmWord}"! I like your energy!`, true);
+                } else {
+                    // If no specific flavor word, just a standard positive reaction for a good prompt
+                    setCharacterState(characterReactionState, "Good prompt! I understand.", true);
+                }
+                
+                updateScoreDisplay(); 
+                checkAchievements(); 
+                if (currentUser) saveUserProgress(currentUser.uid); 
+                
+                // Delay asking for the answer slightly to let flavor animation play
+                setTimeout(() => {
+                    feedbackArea.textContent = promptFeedbackMessage + "Now, what do YOU think the answer is?";
+                    // Ensure Digit is in a thinking state for the math part, unless a flavor animation is still "active"
+                    // This part might need refinement based on how temporaryState in setCharacterState works
+                    if (!character.classList.contains('amused') && !character.classList.contains('extraHappy') && !character.classList.contains('celebrate')) {
+                       setCharacterState('thinking', `Okay, what is ${currentProblem.num1} x ${currentProblem.num2}?`);
+                    } else {
+                        // If a flavor animation was just played, the speech bubble might need updating for the question
+                        speechBubble.textContent = `Okay, what is ${currentProblem.num1} x ${currentProblem.num2}?`;
+                    }
+                    switchToAnswerMode();
+                }, 1600); // Adjust delay as needed
             }
+
             function handleCheckAnswer() { 
                 if (!currentUser || !currentProblem) return; const userAnswerText = userAnswerInput.value.trim();
                 if (userAnswerText === "") { feedbackArea.textContent = "Type your answer!"; setCharacterState('confused'); currentMathStreak = 0; updateStreakDisplay(); return; }
@@ -451,14 +538,7 @@
                 setTimeout(() => { generateProblem(); }, 4500);
             }
 
-            refreshLeaderboardButton.addEventListener('click', async () => {
-                if (currentUser) {
-                    await loadLeaderboard();
-                } else {
-                    leaderboardList.innerHTML = '<li>Please log in to see the leaderboard.</li>';
-                }
-            });
-
+            refreshLeaderboardButton.addEventListener('click', async () => { if (currentUser) { await loadLeaderboard(); } else { leaderboardList.innerHTML = '<li>Please log in to see the leaderboard.</li>'; } });
             submitButton.addEventListener('click', () => { if (!currentUser) { authErrorDiv.textContent = "Please sign in."; return; } if (gameStage === 'prompting') handleSubmitPrompt(); else if (gameStage === 'answering') handleCheckAnswer(); });
             promptInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && gameStage === 'prompting' && currentUser) handleSubmitPrompt(); });
             userAnswerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && gameStage === 'answering' && currentUser) handleCheckAnswer(); });
