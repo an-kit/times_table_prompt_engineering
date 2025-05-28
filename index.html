@@ -15,7 +15,7 @@
         body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #1e3a8a; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 16px; overflow-x: hidden; }
         .app-container { background-color: #ffffff; border-radius: 24px; padding: 24px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); width: 100%; max-width: 600px; text-align: center; }
         .title-header { font-family: 'Baloo 2', cursive; color: #2563eb; font-size: 2.5rem; margin-bottom: 16px; }
-        .character-area { margin-bottom: 16px; position: relative; height: 130px; } /* Adjusted height */
+        .character-area { margin-bottom: 16px; position: relative; height: 130px; }
         .character-image { width: 80px; height: 80px; background-color: #93c5fd; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 2.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s ease; }
         .character-image.happy { transform: scale(1.1) rotate(5deg); }
         .character-image.thinking { transform: scale(1.05) rotate(-3deg); }
@@ -38,7 +38,7 @@
         .auth-button:active, .submit-button:active, .logout-button:active, .google-signin-button:active { transform: translateY(0); }
         .logout-button { background-color: #ef4444; }
         .logout-button:hover { background-color: #dc2626; }
-        .google-signin-button { background-color: #4285F4; margin-top: 10px; width: calc(100% - 10px); /* Adjusted width */ display: flex; align-items: center; justify-content: center; }
+        .google-signin-button { background-color: #4285F4; margin-top: 10px; width: calc(100% - 10px); display: flex; align-items: center; justify-content: center; }
         .google-signin-button:hover { background-color: #357ae8; }
         .google-signin-button svg { width: 18px; height: 18px; margin-right: 8px; }
         .user-status { font-size: 0.9rem; margin-bottom: 16px; padding: 8px; background-color: #e0e7ff; border-radius: 8px; color: #1e40af;}
@@ -61,9 +61,7 @@
 <body>
     <div class="app-container">
         <h1 class="title-header">Math Mates & Prompt Powers</h1>
-
         <div id="userStatus" class="user-status">Connecting...</div>
-
         <div id="authContainer" class="auth-container">
             <h3>Create Account or Sign In</h3>
             <div class="auth-form">
@@ -80,21 +78,19 @@
                 Sign in with Google
             </button>
             <div id="authError" class="text-red-500 text-sm mt-2"></div>
-            </div>
+        </div>
 
-        <div id="gameContent" style="display: none;"> <div class="character-area">
+        <div id="gameContent" style="display: none;">
+            <div class="character-area">
                 <div id="character" class="character-image">🧠</div>
-                <div class="speech-bubble" id="speechBubble">Hi! I'm Digit! Give me a times table problem to solve!</div>
+                <div class="speech-bubble" id="speechBubble">Let's play!</div>
             </div>
-
             <div id="achievementNotification" class="achievement-notification"></div>
             <div id="problemStatement" class="problem-statement"></div>
             <div id="feedbackArea" class="feedback-area"></div>
-
             <input type="text" id="promptInput" class="input-field" placeholder="e.g., Digit, solve 2 x 3">
             <input type="number" id="userAnswerInput" class="input-field" placeholder="Your answer...">
             <button id="submitButton" class="submit-button">Send Prompt!</button>
-
             <div id="scoreArea" class="score-area">Score: 0 | Level: 1</div>
             <div id="streakCounter" class="streak-counter"></div>
             <div class="mt-4">
@@ -135,8 +131,11 @@
             }
 
             const auth = firebase.auth();
+            const db = firebase.firestore(); // Initialize Firestore
+
             // DOM Elements
             const character = document.getElementById('character');
+            // ... (all other DOM elements as before)
             const speechBubble = document.getElementById('speechBubble');
             const problemStatement = document.getElementById('problemStatement');
             const feedbackArea = document.getElementById('feedbackArea');
@@ -166,96 +165,146 @@
             let currentMathStreak = 0, successfulPrompts = 0, correctMathAnswers = 0;
             let currentUser = null;
 
-            const characterEmojis = { idle: '🧠', thinking: '🤔', happy: '🥳', confused: '�', correct: '🤩', celebrate: '🎉' };
-            const achievements = {
-                PROMPT_ROOKIE: { id: 'PROMPT_ROOKIE', name: "🚀 Prompt Rookie!", condition: () => successfulPrompts >= 5, earned: false, desc: "5 successful prompts!" },
-                MATH_BEGINNER: { id: 'MATH_BEGINNER', name: "➕ Math Beginner!", condition: () => correctMathAnswers >= 10, earned: false, desc: "10 correct math answers!" },
-                SCORE_HERO_100: { id: 'SCORE_HERO_100', name: "💯 Score Hero: 100!", condition: () => score >= 100, earned: false, desc: "Reached 100 points!" },
-                LEVEL_UP_STAR_2: { id: 'LEVEL_UP_STAR_2', name: "⭐ Level 2 Star!", condition: () => level >= 2, earned: false, desc: "Reached Level 2!" },
+            // Deep copy achievements for each user session to reset 'earned' and 'count' states
+            function getInitialAchievementsState() {
+                return JSON.parse(JSON.stringify({ // Simple deep copy for this structure
+                    PROMPT_ROOKIE: { id: 'PROMPT_ROOKIE', name: "🚀 Prompt Rookie!", condition: () => successfulPrompts >= 5, earned: false, count:0, needed: 5, type: 'prompt'},
+                    MATH_BEGINNER: { id: 'MATH_BEGINNER', name: "➕ Math Beginner!", condition: () => correctMathAnswers >= 10, earned: false, count:0, needed: 10, type: 'math'},
+                    SCORE_HERO_100: { id: 'SCORE_HERO_100', name: "💯 Score Hero: 100!", condition: () => score >= 100, earned: false, type: 'score'},
+                    LEVEL_UP_STAR_2: { id: 'LEVEL_UP_STAR_2', name: "⭐ Level 2 Star!", condition: () => level >= 2, earned: false, type: 'level'},
+                    TABLE_MASTER_2S: { id: 'TABLE_MASTER_2S', name: "🥈 Table Master: 2s!", targetTable: 2, count: 0, needed: 3, earned: false, type: 'table'},
+                    TABLE_MASTER_5S: { id: 'TABLE_MASTER_5S', name: "🏅 Table Master: 5s!", targetTable: 5, count: 0, needed: 3, earned: false, type: 'table'}
+                }));
+            }
+            let achievements = getInitialAchievementsState();
+
+            const characterEmojis = { idle: '🧠', thinking: '🤔', happy: '🥳', confused: '😕', correct: '🤩', celebrate: '🎉' };
+            const problemsByLevel = { /* ... (same as before) ... */ 
+                1: [ { num1: 2, num2: 3 }, { num1: 5, num2: 2 }, { num1: 10, num2: 4 }], 2: [ { num1: 3, num2: 4 }, { num1: 4, num2: 5 }, { num1: 6, num2: 3 }], 3: [ { num1: 7, num2: 3 }, { num1: 8, num2: 4 }, { num1: 9, num2: 2 }], 4: [ { num1: 11, num2: 2 }, { num1: 12, num2: 3 }, { num1: 11, num2: 5 }], 5: [ { num1: 7, num2: 11 }, { num1: 9, num2: 12 }, { num1: 12, num2: 12 }]
             };
-            const problemsByLevel = {
-                1: [ { num1: 2, num2: 3 }, { num1: 5, num2: 2 }, { num1: 10, num2: 4 }],
-                2: [ { num1: 3, num2: 4 }, { num1: 4, num2: 5 }, { num1: 6, num2: 3 }],
-                3: [ { num1: 7, num2: 3 }, { num1: 8, num2: 4 }, { num1: 9, num2: 2 }],
-                4: [ { num1: 11, num2: 2 }, { num1: 12, num2: 3 }, { num1: 11, num2: 5 }],
-                5: [ { num1: 7, num2: 11 }, { num1: 9, num2: 12 }, { num1: 12, num2: 12 }]
-            };
-            const promptTipsByLevel = {
-                1: [ "Be clear! Tell Digit exactly what numbers to multiply." ],
-                2: [ "You can use words like 'calculate' or 'solve'." ],
-                3: [ "For story problems, find the two numbers." ],
-                4: [ "The 11s and 12s tables are new! Focus on these." ],
-                5: [ "You're a pro! Mix and match your prompt styles." ]
-            };
+            const promptTipsByLevel = { /* ... (same as before) ... */
+                1: [ "Be clear! Tell Digit exactly what numbers to multiply." ], 2: [ "You can use words like 'calculate' or 'solve'." ], 3: [ "For story problems, find the two numbers." ], 4: [ "The 11s and 12s tables are new! Focus on these." ], 5: [ "You're a pro! Mix and match your prompt styles." ]
+             };
+
+
+            // --- Firestore Functions ---
+            async function saveUserProgress(userId) {
+                if (!userId) return;
+                const progressData = {
+                    score,
+                    level,
+                    currentMathStreak,
+                    successfulPrompts,
+                    correctMathAnswers,
+                    achievements // Save the whole achievements object (with earned status and counts)
+                };
+                try {
+                    await db.collection('userProgress').doc(userId).set(progressData, { merge: true });
+                    console.log("Progress saved for user:", userId);
+                } catch (error) {
+                    console.error("Error saving progress:", error);
+                }
+            }
+
+            async function loadUserProgress(userId) {
+                if (!userId) {
+                    resetLocalGameState(); // Ensure local state is fresh if no user
+                    updateUIFromState();
+                    generateProblem();
+                    return;
+                }
+                try {
+                    const doc = await db.collection('userProgress').doc(userId).get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        score = data.score || 0;
+                        level = data.level || 1;
+                        currentMathStreak = data.currentMathStreak || 0;
+                        successfulPrompts = data.successfulPrompts || 0;
+                        correctMathAnswers = data.correctMathAnswers || 0;
+                        
+                        // Load achievements: merge saved state with initial structure
+                        const loadedAchievements = data.achievements || {};
+                        achievements = getInitialAchievementsState(); // Start with fresh structure
+                        for (const key in achievements) {
+                            if (loadedAchievements[key]) {
+                                achievements[key].earned = loadedAchievements[key].earned || false;
+                                achievements[key].count = loadedAchievements[key].count || 0;
+                            }
+                        }
+                        console.log("Progress loaded for user:", userId, data);
+                    } else {
+                        console.log("No progress found for new user, starting fresh:", userId);
+                        resetLocalGameState(); // Set defaults for a new user in DB
+                        await saveUserProgress(userId); // Save initial state for new user
+                    }
+                } catch (error) {
+                    console.error("Error loading progress:", error);
+                    resetLocalGameState(); // Fallback to local reset if loading fails
+                }
+                updateUIFromState();
+                generateProblem(); // Generate problem after loading/resetting
+            }
+            
+            function updateUIFromState() {
+                updateScoreDisplay();
+                updateStreakDisplay();
+                updatePromptTips(); // In case level changed
+            }
 
             // --- Authentication Logic ---
-            signUpButton.addEventListener('click', () => {
-                const email = emailInput.value;
-                const password = passwordInput.value;
-                authErrorDiv.textContent = "";
-                auth.createUserWithEmailAndPassword(email, password)
+            signUpButton.addEventListener('click', () => { /* ... same ... */ 
+                 const email = emailInput.value; const password = passwordInput.value; authErrorDiv.textContent = "";
+                 auth.createUserWithEmailAndPassword(email, password)
                     .then((userCredential) => { console.log("Signed up:", userCredential.user); })
                     .catch((error) => { authErrorDiv.textContent = error.message; console.error("Sign up error:", error); });
             });
-
-            loginButton.addEventListener('click', () => {
-                const email = emailInput.value;
-                const password = passwordInput.value;
-                authErrorDiv.textContent = "";
+            loginButton.addEventListener('click', () => { /* ... same ... */ 
+                const email = emailInput.value; const password = passwordInput.value; authErrorDiv.textContent = "";
                 auth.signInWithEmailAndPassword(email, password)
                     .then((userCredential) => { console.log("Logged in:", userCredential.user); })
                     .catch((error) => { authErrorDiv.textContent = error.message; console.error("Login error:", error); });
             });
-
-            googleSignInButton.addEventListener('click', () => {
-                const provider = new firebase.auth.GoogleAuthProvider();
-                authErrorDiv.textContent = "";
-                // Reverted to signInWithPopup
+            googleSignInButton.addEventListener('click', () => { /* ... same signInWithPopup ... */ 
+                const provider = new firebase.auth.GoogleAuthProvider(); authErrorDiv.textContent = "";
                 auth.signInWithPopup(provider)
-                    .then((result) => {
-                        console.log("Google Sign-In successful:", result.user);
-                        // User will be handled by onAuthStateChanged
-                    })
-                    .catch((error) => {
-                        authErrorDiv.textContent = `Google Sign-In Error: ${error.message}`;
-                        console.error("Google Sign-In error:", error);
-                    });
+                    .then((result) => { console.log("Google Sign-In successful:", result.user); })
+                    .catch((error) => { authErrorDiv.textContent = `Google Sign-In Error: ${error.message}`; console.error("Google Sign-In error:", error); });
             });
-            
-            // Removed getRedirectResult() block as it's not needed for signInWithPopup
-
-            logoutButton.addEventListener('click', () => {
+            logoutButton.addEventListener('click', async () => { /* ... same ... */ 
+                // Save progress one last time before signing out
+                if (currentUser) {
+                    await saveUserProgress(currentUser.uid); 
+                }
                 auth.signOut().then(() => { console.log("Signed out"); })
                     .catch((error) => { console.error("Sign out error:", error); });
             });
 
-            auth.onAuthStateChanged((user) => {
+            auth.onAuthStateChanged(async (user) => { // Make async for await loadUserProgress
                 if (user) {
                     currentUser = user;
                     userStatusDiv.textContent = `Signed in as: ${user.displayName || user.email}`;
                     authContainer.style.display = 'none';
                     gameContentDiv.style.display = 'block';
                     authErrorDiv.textContent = "";
-                    resetGameStateForUser(); 
-                    generateProblem();
+                    await loadUserProgress(user.uid); // Load progress
                 } else {
                     currentUser = null;
                     userStatusDiv.textContent = "You are not signed in. Sign up or Login to save progress!";
                     authContainer.style.display = 'block';
                     gameContentDiv.style.display = 'none';
                     resetLocalGameState(); 
+                    updateUIFromState(); // Reflect reset state in UI
                 }
             });
             
             function resetLocalGameState() {
                 score = 0; level = 1; currentMathStreak = 0; successfulPrompts = 0; correctMathAnswers = 0;
-                Object.values(achievements).forEach(ach => ach.earned = false);
-                updateScoreDisplay(); updateStreakDisplay();
+                achievements = getInitialAchievementsState(); // Reset achievements to initial state
             }
+            // resetGameStateForUser removed as its logic is now in onAuthStateChanged/loadUserProgress
 
-            function resetGameStateForUser() { resetLocalGameState(); }
-
-            // --- Game Logic Functions (Mostly same as before) ---
+            // --- Game Logic Functions ---
             function updateScoreDisplay() { scoreArea.textContent = `Score: ${score} | Level: ${level}`; }
             function updateStreakDisplay() { streakCounter.textContent = currentMathStreak >= 2 ? `🔥 ${currentMathStreak} in a row!` : ""; }
             function notifyAchievement(achievement) { 
@@ -263,44 +312,75 @@
                 achievementNotification.style.display = 'block';
                 setTimeout(() => { achievementNotification.style.display = 'none'; }, 4000);
                 setCharacterState('celebrate', `Wow! ${achievement.name}`);
+                if (currentUser) saveUserProgress(currentUser.uid); // Save when achievement is unlocked
             }
             function checkAchievements() { 
+                let newAchievementEarned = false;
                 for (const key in achievements) {
                     const ach = achievements[key];
-                    if (!ach.earned && ach.condition && ach.condition()) {
-                        ach.earned = true; notifyAchievement(ach);
+                    if (!ach.earned) {
+                        // Update counts for relevant achievements
+                        if (ach.type === 'prompt' && successfulPrompts >= ach.needed) ach.earned = true;
+                        else if (ach.type === 'math' && correctMathAnswers >= ach.needed) ach.earned = true;
+                        else if (ach.type === 'score' && score >= ach.needed) ach.earned = true; // Assuming 'needed' is the score threshold
+                        else if (ach.type === 'level' && level >= ach.needed) ach.earned = true; // Assuming 'needed' is the level threshold
+                        
+                        // For 'table' type, count is updated in checkTableMasterAchievements
+                        
+                        if (ach.condition && ach.condition()) ach.earned = true; // Fallback for general conditions
+
+                        if (ach.earned) {
+                           notifyAchievement(ach);
+                           newAchievementEarned = true;
+                        }
                     }
+                }
+                // If a non-table achievement was earned by condition(), save progress.
+                // Table master achievements are saved when notifyAchievement is called from checkTableMasterAchievements.
+            }
+             function checkTableMasterAchievements(isCorrect) {
+                if (!isCorrect || !currentProblem || !currentUser) return;
+                let newAchievementEarned = false;
+                for (const key in achievements) {
+                    const ach = achievements[key];
+                    if (ach.type === 'table' && !ach.earned && ach.targetTable && 
+                        (currentProblem.num1 === ach.targetTable || currentProblem.num2 === ach.targetTable)) {
+                        ach.count = (ach.count || 0) + 1;
+                        if (ach.count >= ach.needed) {
+                            ach.earned = true;
+                            notifyAchievement(ach); // This will also trigger a save
+                            newAchievementEarned = true;
+                        }
+                    }
+                }
+                if (newAchievementEarned || isCorrect) { // Also save if just a correct answer for a table type
+                   // saveUserProgress(currentUser.uid); // Covered by save in notifyAchievement or end of handleCheckAnswer
                 }
             }
 
-            function setCharacterState(state, message = "") { 
-                character.textContent = characterEmojis[state] || characterEmojis.idle;
+
+            function setCharacterState(state, message = "") { /* ... same ... */ 
+                 character.textContent = characterEmojis[state] || characterEmojis.idle;
                 character.className = 'character-image'; 
                 if (Object.keys(characterEmojis).includes(state)) { character.classList.add(state); }
                 speechBubble.textContent = message || getDefaultMessageForState(state);
             }
-            function getDefaultMessageForState(state) { 
+            function getDefaultMessageForState(state) {  /* ... same ... */ 
                 let userName = "Friend";
-                if (currentUser) {
-                    userName = currentUser.displayName ? currentUser.displayName.split(' ')[0] : currentUser.email.split('@')[0];
-                }
+                if (currentUser) { userName = currentUser.displayName ? currentUser.displayName.split(' ')[0] : currentUser.email.split('@')[0]; }
                 switch (state) {
-                    case 'thinking': return "Hmm, let me think...";
-                    case 'happy': return "You got it!";
-                    case 'confused': return "I'm a bit confused. Try rephrasing?";
-                    case 'correct': return "That's amazing!";
-                    case 'celebrate': return "Woohoo! That's awesome!";
-                    default: return `Hi ${userName}! Let's play!`;
+                    case 'thinking': return "Hmm, let me think..."; case 'happy': return "You got it!"; case 'confused': return "I'm a bit confused. Try rephrasing?";
+                    case 'correct': return "That's amazing!"; case 'celebrate': return "Woohoo! That's awesome!"; default: return `Hi ${userName}! Let's play!`;
                 }
             }
-
-            function generateProblem() { 
-                if (!currentUser) return; 
+            function generateProblem() {  /* ... same, but ensure UI is updated after load/reset ... */ 
+                if (!currentUser) { console.log("Cannot generate problem, no user."); return;  }
                 const currentMaxLevel = Object.keys(problemsByLevel).length;
-                if (level > currentMaxLevel) level = currentMaxLevel;
+                if (level > currentMaxLevel) level = currentMaxLevel; // Ensure level doesn't exceed defined problems
                 const levelProblems = problemsByLevel[level] || problemsByLevel[1];
                 const problemIndex = Math.floor(Math.random() * levelProblems.length);
                 currentProblem = levelProblems[problemIndex];
+                if (!currentProblem) { console.error("Failed to get current problem for level " + level); return; }
                 currentProblem.answer = currentProblem.num1 * currentProblem.num2;
                 let problemText = `Challenge: What is ${currentProblem.num1} x ${currentProblem.num2}?`;
                 if (currentProblem.story) { problemText = `Challenge: ${currentProblem.story} (This means ${currentProblem.num1} x ${currentProblem.num2}!)`; }
@@ -308,17 +388,19 @@
                 feedbackArea.textContent = ""; promptInput.value = ""; userAnswerInput.value = "";
                 switchToPromptMode();
                 setCharacterState('idle'); 
-                updatePromptTips(); checkAchievements();
+                // updatePromptTips(); // Called from updateUIFromState if level changes
+                // checkAchievements(); // Called from updateUIFromState if score/level changes
+                updateUIFromState(); // Ensure UI reflects current state
             }
-            function updatePromptTips() { 
-                const currentMaxLevel = Object.keys(promptTipsByLevel).length;
+            function updatePromptTips() {  /* ... same ... */ 
+                 const currentMaxLevel = Object.keys(promptTipsByLevel).length;
                 let tipsLevel = level > currentMaxLevel ? currentMaxLevel : level;
                 const currentTips = promptTipsByLevel[tipsLevel] || promptTipsByLevel[1];
                 tipsList.innerHTML = '';
                 currentTips.forEach(tip => { const li = document.createElement('li'); li.textContent = tip; tipsList.appendChild(li); });
             }
-            function parsePrompt(promptText) { 
-                promptText = promptText.toLowerCase();
+            function parsePrompt(promptText) { /* ... same ... */ 
+                 promptText = promptText.toLowerCase();
                 const result = { numbers: [], intent: null, keywords: [], isClear: false };
                 const numberMatches = promptText.match(/\d+/g);
                 if (numberMatches) result.numbers = numberMatches.map(Number);
@@ -332,11 +414,11 @@
                 }
                 return result;
             }
-            function switchToAnswerMode() { 
+            function switchToAnswerMode() { /* ... same ... */ 
                 gameStage = 'answering'; promptInput.style.display = 'none'; userAnswerInput.style.display = 'block';
                 userAnswerInput.focus(); submitButton.textContent = 'Check My Answer!';
             }
-            function switchToPromptMode() { 
+            function switchToPromptMode() { /* ... same ... */ 
                 gameStage = 'prompting'; promptInput.style.display = 'block'; userAnswerInput.style.display = 'none';
                 promptInput.focus(); submitButton.textContent = 'Send Prompt!';
             }
@@ -349,24 +431,29 @@
                 const parsed = parsePrompt(userPromptText);
                 let promptFeedbackMessage = "";
                 if (!parsed.isClear || parsed.intent !== 'multiply') {
-                    promptFeedbackMessage = "Hmm, that prompt wasn't quite right for the problem. Try again!";
+                    promptFeedbackMessage = "Hmm, that prompt wasn't quite right. Try again!";
                     setCharacterState('confused', promptFeedbackMessage); feedbackArea.textContent = promptFeedbackMessage; return;
                 }
-                successfulPrompts++; score += 5;
+                successfulPrompts++; score += 5; // Base points
                 if (parsed.keywords.length > 0) { score += 2; promptFeedbackMessage = "Awesome power prompt! "; }
                 else { promptFeedbackMessage = "Great prompt! "; }
-                updateScoreDisplay();
+                
+                updateScoreDisplay(); checkAchievements(); // Check score-based achievements
+                // Save progress after successful prompt and score update
+                if (currentUser) saveUserProgress(currentUser.uid); 
+
                 feedbackArea.textContent = promptFeedbackMessage + "Now, what's the answer?";
                 setCharacterState('thinking', promptFeedbackMessage + `What is ${currentProblem.num1} x ${currentProblem.num2}?`);
-                switchToAnswerMode(); checkAchievements();
+                switchToAnswerMode();
             }
 
             function handleCheckAnswer() { 
                 if (!currentUser || !currentProblem) return;
                 const userAnswerText = userAnswerInput.value.trim();
-                if (userAnswerText === "") { feedbackArea.textContent = "Type your answer!"; setCharacterState('confused'); currentMathStreak = 0; updateStreakDisplay(); return; }
+                if (userAnswerText === "") { /* ... same ... */ feedbackArea.textContent = "Type your answer!"; setCharacterState('confused'); currentMathStreak = 0; updateStreakDisplay(); return; }
                 const userAnswer = parseInt(userAnswerText);
-                if (isNaN(userAnswer)) { feedbackArea.textContent = "Enter a number."; setCharacterState('confused'); currentMathStreak = 0; updateStreakDisplay(); return; }
+                if (isNaN(userAnswer)) { /* ... same ... */ feedbackArea.textContent = "Enter a number."; setCharacterState('confused'); currentMathStreak = 0; updateStreakDisplay(); return; }
+                
                 const correctAnswer = currentProblem.answer;
                 let resultMessage = ""; let isUserCorrect = userAnswer === correctAnswer;
                 if (isUserCorrect) {
@@ -381,15 +468,25 @@
                     resultMessage = `Almost! Answer is ${correctAnswer}. Prompt was good!`;
                     setCharacterState('happy', `Good try! It's ${correctAnswer}.`);
                 }
-                feedbackArea.textContent = resultMessage; updateScoreDisplay(); updateStreakDisplay(); checkAchievements();
+                feedbackArea.textContent = resultMessage; 
+                updateScoreDisplay(); updateStreakDisplay();
+                checkTableMasterAchievements(isUserCorrect); // Check table achievements based on correctness
+                checkAchievements(); // Check other achievements (score, math counts, etc.)
+
                 const oldLevel = level;
-                if (score >= level * 50 && level < Object.keys(problemsByLevel).length) level++;
+                const currentMaxAppLevel = Object.keys(problemsByLevel).length;
+                if (score >= level * 50 && level < currentMaxAppLevel) level++;
+                
                 if (level > oldLevel) {
                     setTimeout(() => { 
                         feedbackArea.textContent += ` 🎉 LEVEL UP! Level ${level}! 🎉`;
-                        setCharacterState('celebrate', `Woohoo! LEVEL ${level}!`); updatePromptTips(); checkAchievements();
+                        setCharacterState('celebrate', `Woohoo! LEVEL ${level}!`); 
+                        updatePromptTips(); checkAchievements(); // Check level up achievement
                     }, 1500);
                 }
+                
+                if (currentUser) saveUserProgress(currentUser.uid); // Save progress after every answer attempt
+
                 setTimeout(() => { generateProblem(); }, 4500);
             }
 
