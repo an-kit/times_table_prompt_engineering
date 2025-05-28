@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Mates & Prompt Powers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Baloo+2:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff; /* Light blue background */
+            color: #1e3a8a; /* Dark blue text */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+        .app-container {
+            background-color: #ffffff;
+            border-radius: 24px; /* More rounded corners */
+            padding: 24px; /* Increased padding */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px; /* Max width for better readability on larger screens */
+            text-align: center;
+        }
+        .title-header {
+            font-family: 'Baloo 2', cursive;
+            color: #2563eb; /* Brighter blue for title */
+            font-size: 2.5rem; /* Larger title */
+            margin-bottom: 24px;
+        }
+        .character-area {
+            margin-bottom: 24px;
+            position: relative;
+            height: 150px; /* Fixed height for character and speech bubble */
+        }
+        .character-image {
+            width: 100px;
+            height: 100px;
+            background-color: #93c5fd; /* Light blue circle for character */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 3rem; /* Emoji size */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .character-image.happy { transform: scale(1.1) rotate(5deg); }
+        .character-image.thinking { transform: scale(1.05) rotate(-3deg); }
+        .character-image.confused { animation: shake 0.5s; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .speech-bubble {
+            background-color: #e0f2fe; /* Lighter blue for speech bubble */
+            color: #0c4a6e; /* Darker blue text for bubble */
+            padding: 12px 18px;
+            border-radius: 16px;
+            position: relative;
+            display: inline-block;
+            max-width: 90%;
+            min-height: 40px; /* Ensure bubble has height even if empty */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            font-size: 0.9rem; /* Slightly smaller for speech */
+        }
+        .speech-bubble::after { /* Triangle for speech bubble */
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid #e0f2fe;
+        }
+
+        .problem-statement, .feedback-area {
+            font-size: 1.25rem; /* Larger problem/feedback text */
+            margin-bottom: 20px;
+            color: #172554; /* Even darker blue for emphasis */
+            min-height: 30px; /* Ensure space is reserved */
+        }
+        .input-field { /* Common class for input fields */
+            width: 100%;
+            padding: 12px 16px; /* More padding */
+            border-radius: 12px; /* More rounded */
+            border: 2px solid #60a5fa; /* Blue border */
+            margin-bottom: 16px;
+            font-size: 1rem;
+            box-sizing: border-box; /* Ensure padding doesn't expand width */
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .input-field:focus {
+            border-color: #2563eb; /* Darker blue on focus */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); /* Focus ring */
+            outline: none;
+        }
+        #userAnswerInput {
+            display: none; /* Hidden by default */
+        }
+        .submit-button {
+            background-color: #2563eb; /* Primary blue */
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        }
+        .submit-button:hover {
+            background-color: #1d4ed8; /* Darker blue on hover */
+            transform: translateY(-2px);
+        }
+        .submit-button:active {
+            transform: translateY(0);
+        }
+        .score-area {
+            margin-top: 24px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .prompt-tips-button {
+            background-color: #fbbf24; /* Amber for tips button */
+            color: #78350f; /* Dark amber text */
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+        .prompt-tips-button:hover {
+            background-color: #f59e0b; /* Darker amber on hover */
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5); /* Dim background */
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: auto;
+            padding: 24px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            color: #1e3a8a;
+        }
+        .modal-content h3 {
+            font-family: 'Baloo 2', cursive;
+            color: #2563eb;
+            margin-top: 0;
+            font-size: 1.8rem;
+        }
+        .modal-content ul {
+            list-style-type: '✨ '; /* Sparkle emoji as bullet */
+            padding-left: 20px;
+        }
+        .modal-content li {
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        .close-button {
+            background-color: #ef4444; /* Red for close */
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+            float: right;
+            transition: background-color 0.3s ease;
+        }
+        .close-button:hover {
+            background-color: #dc2626; /* Darker red */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .title-header { font-size: 2rem; }
+            .problem-statement, .feedback-area { font-size: 1.1rem; }
+            .input-field { font-size: 0.9rem; }
+            .submit-button { font-size: 1rem; padding: 10px 20px;}
+            .character-image { width: 80px; height: 80px; font-size: 2.5rem; }
+            .character-area { height: 130px; }
+            .speech-bubble { padding: 10px 14px; font-size: 0.85rem; }
+            .app-container { padding: 16px; }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <h1 class="title-header">Math Mates & Prompt Powers</h1>
+
+        <div class="character-area">
+            <div id="character" class="character-image">🧠</div>
+            <div class="speech-bubble" id="speechBubble">Hi! I'm Digit! Give me a times table problem to solve!</div>
+        </div>
+
+        <div id="problemStatement" class="problem-statement"></div>
+        <div id="feedbackArea" class="feedback-area"></div>
+
+        <input type="text" id="promptInput" class="input-field" placeholder="e.g., Digit, solve 2 x 3">
+        <input type="number" id="userAnswerInput" class="input-field" placeholder="Your answer..."> <button id="submitButton" class="submit-button">Send Prompt!</button>
+
+        <div id="scoreArea" class="score-area">Score: 0 | Level: 1</div>
+        <button id="promptTipsButton" class="prompt-tips-button">Show Prompt Tips ✨</button>
+    </div>
+
+    <div id="tipsModal" class="modal">
+        <div class="modal-content">
+            <span id="closeModalButton" class="close-button">&times; Close</span>
+            <h3>🚀 Prompt Power Tips!</h3>
+            <ul id="tipsList">
+                {/* Tips will be dynamically populated */}
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const character = document.getElementById('character');
+        const speechBubble = document.getElementById('speechBubble');
+        const problemStatement = document.getElementById('problemStatement');
+        const feedbackArea = document.getElementById('feedbackArea');
+        const promptInput = document.getElementById('promptInput');
+        const userAnswerInput = document.getElementById('userAnswerInput');
+        const submitButton = document.getElementById('submitButton');
+        const scoreArea = document.getElementById('scoreArea');
+        const promptTipsButton = document.getElementById('promptTipsButton');
+        const tipsModal = document.getElementById('tipsModal');
+        const closeModalButton = document.getElementById('closeModalButton');
+        const tipsList = document.getElementById('tipsList');
+
+        // Game State
+        let score = 0;
+        let level = 1;
+        let currentProblem = null;
+        let gameStage = 'prompting'; // 'prompting' or 'answering'
+        const characterEmojis = {
+            idle: '🧠',
+            thinking: '🤔',
+            happy: '🥳',
+            confused: '😕',
+            correct: '🤩'
+        };
+
+        function updateScoreDisplay() {
+            scoreArea.textContent = `Score: ${score} | Level: ${level}`;
+        }
+
+        const problemsByLevel = {
+            1: [ // Focus on 0, 1, 2, 5, 10 tables
+                { num1: 2, num2: 3 }, { num1: 5, num2: 2 }, { num1: 10, num2: 4 },
+                { num1: 1, num2: 7 }, { num1: 0, num2: 5 }, { num1: 2, num2: 8 },
+                { num1: 5, num2: 6 }, { num1: 10, num2: 7}
+            ],
+            2: [ // Focus on 3, 4, 6 tables
+                { num1: 3, num2: 4 }, { num1: 4, num2: 5 }, { num1: 6, num2: 3 },
+                { num1: 3, num2: 7 }, { num1: 4, num2: 6 }, { num1: 6, num2: 7 },
+                { num1: 3, num2: 9 }, { num1: 4, num2: 8 }
+            ],
+            3: [ // Focus on 7, 8, 9 tables
+                { num1: 7, num2: 3 }, { num1: 8, num2: 4 }, { num1: 9, num2: 2 },
+                { num1: 7, num2: 6, story: "7 dragons have 6 gems each. Total gems?" },
+                { num1: 8, num2: 7, story: "8 knights guard 7 towers each. Towers guarded?" },
+                { num1: 9, num2: 5, story: "9 wizards brew 5 potions each. Total potions?" },
+                { num1: 7, num2: 9 }, { num1: 8, num2: 6 }, { num1: 9, num2: 8 }
+            ],
+            4: [ // Focus on 11, 12 tables and mix
+                { num1: 11, num2: 2 }, { num1: 12, num2: 3 }, { num1: 11, num2: 5 },
+                { num1: 12, num2: 4, story: "12 astronauts see 4 stars each. Stars seen?" },
+                { num1: 11, num2: 7 }, { num1: 12, num2: 6 },
+                { num1: 6, num2: 11 }, { num1: 8, num2: 12 }
+            ],
+            5: [ // Comprehensive review up to 12x12
+                { num1: 7, num2: 11 }, { num1: 9, num2: 12 }, { num1: 12, num2: 7 },
+                { num1: 11, num2: 11, story: "11 superheroes have 11 gadgets each. Total gadgets?" },
+                { num1: 8, num2: 9 }, { num1: 12, num2: 12 },
+                { num1: 6, num2: 8 }, { num1: 10, num2: 12 }, { num1: 4, num2: 11 }
+            ]
+        };
+         const promptTipsByLevel = {
+            1: [
+                "Be clear! Tell Digit exactly what numbers to multiply.",
+                "Try: 'Digit, what is 2 times 5?'",
+                "Make sure to include both numbers in your prompt!"
+            ],
+            2: [
+                "You can use words like 'calculate' or 'solve'.",
+                "Example: 'Digit, please calculate 3 x 6.'",
+                "Good prompts help Digit understand quickly!"
+            ],
+            3: [
+                "For story problems, find the two numbers you need to multiply.",
+                "Example: 'If 7 dragons have 6 gems, solve 7 x 6.'",
+                "Using 'power words' like 'Quickly solve' can be fun!"
+            ],
+            4: [
+                "The 11s and 12s tables are new! Focus on these.",
+                "Try: 'Digit, super solve 11 times 4!'",
+                "Remember, clear instructions are key!"
+            ],
+            5: [
+                "You're a pro! Mix and match your prompt styles.",
+                "Challenge Digit with any times table up to 12 x 12.",
+                "Example: 'Digit, what is the answer to 12 multiplied by 9?'"
+            ]
+        };
+
+        function setCharacterState(state, message = "") {
+            character.textContent = characterEmojis[state] || characterEmojis.idle;
+            character.className = 'character-image'; 
+            if (state === 'happy' || state === 'correct' || state === 'thinking' || state === 'confused') {
+                character.classList.add(state);
+            }
+            speechBubble.textContent = message || getDefaultMessageForState(state);
+        }
+
+        function getDefaultMessageForState(state) {
+             switch (state) {
+                case 'thinking': return "Hmm, let me think...";
+                case 'happy': return "You got it!";
+                case 'confused': return "I'm a bit confused. Can you try rephrasing?";
+                case 'correct': return "That's amazing!";
+                default: return "Hi! I'm Digit! Ready for a challenge?";
+            }
+        }
+
+        function generateProblem() {
+            // Ensure level doesn't exceed available problem sets
+            const currentMaxLevel = Object.keys(problemsByLevel).length;
+            if (level > currentMaxLevel) level = currentMaxLevel; // Cap level if it exceeds defined problems
+
+            const levelProblems = problemsByLevel[level] || problemsByLevel[1]; // Default to level 1 if something is wrong
+            const problemIndex = Math.floor(Math.random() * levelProblems.length);
+            currentProblem = levelProblems[problemIndex];
+            currentProblem.answer = currentProblem.num1 * currentProblem.num2;
+
+            if (currentProblem.story) {
+                problemStatement.textContent = `Challenge: ${currentProblem.story} (What is ${currentProblem.num1} x ${currentProblem.num2}?)`;
+            } else {
+                problemStatement.textContent = `Challenge: What is ${currentProblem.num1} x ${currentProblem.num2}?`;
+            }
+            feedbackArea.textContent = "";
+            promptInput.value = "";
+            userAnswerInput.value = "";
+            switchToPromptMode();
+            setCharacterState('idle', `Okay, Level ${level}! ${currentProblem.story ? currentProblem.story : `What is ${currentProblem.num1} x ${currentProblem.num2}?`}`);
+            updatePromptTips();
+        }
+
+        function updatePromptTips() {
+            const currentMaxLevel = Object.keys(promptTipsByLevel).length;
+            let tipsLevel = level;
+            if (level > currentMaxLevel) tipsLevel = currentMaxLevel; // Cap tips level
+
+            const currentTips = promptTipsByLevel[tipsLevel] || promptTipsByLevel[1];
+            tipsList.innerHTML = '';
+            currentTips.forEach(tip => {
+                const li = document.createElement('li');
+                li.textContent = tip;
+                tipsList.appendChild(li);
+            });
+        }
+
+        function parsePrompt(promptText) {
+            promptText = promptText.toLowerCase();
+            const result = {
+                numbers: [],
+                intent: null,
+                keywords: [],
+                isClear: false,
+            };
+
+            const numberMatches = promptText.match(/\d+/g);
+            if (numberMatches) {
+                result.numbers = numberMatches.map(Number);
+            }
+
+            if (promptText.includes('x') || promptText.includes('*') || promptText.includes('times') || promptText.includes('multiply') || promptText.includes('multiplied by')) {
+                result.intent = 'multiply';
+            }
+
+            if (promptText.includes('quickly') || promptText.includes('fast')) result.keywords.push('quickly');
+            if (promptText.includes('super') || promptText.includes('magic')) result.keywords.push('magic');
+            if (promptText.includes('calculate') || promptText.includes('solve') || promptText.includes('what is')) result.keywords.push('solve_command');
+
+            if (result.intent === 'multiply' && result.numbers.length >= 2) {
+                // Ensure currentProblem is defined before accessing its properties
+                if (currentProblem && typeof currentProblem.num1 !== 'undefined' && typeof currentProblem.num2 !== 'undefined') {
+                    const problemNums = [currentProblem.num1, currentProblem.num2].sort();
+                    const promptNumsSorted = result.numbers.slice(0,2).sort();
+                    if (problemNums[0] === promptNumsSorted[0] && problemNums[1] === promptNumsSorted[1]) {
+                         result.isClear = true;
+                    } else {
+                        result.isClear = false;
+                    }
+                } else {
+                    result.isClear = false; // Not enough info to be clear
+                    console.error("currentProblem is not defined or missing num1/num2 in parsePrompt");
+                }
+            } else {
+                 result.isClear = false;
+            }
+            return result;
+        }
+
+        function switchToAnswerMode() {
+            gameStage = 'answering';
+            promptInput.style.display = 'none';
+            userAnswerInput.style.display = 'block';
+            userAnswerInput.focus();
+            submitButton.textContent = 'Check My Answer!';
+        }
+
+        function switchToPromptMode() {
+            gameStage = 'prompting';
+            promptInput.style.display = 'block';
+            userAnswerInput.style.display = 'none';
+            promptInput.focus();
+            submitButton.textContent = 'Send Prompt!';
+        }
+
+        function handleSubmitPrompt() {
+            if (!currentProblem) {
+                generateProblem(); return;
+            }
+
+            const userPromptText = promptInput.value.trim();
+            if (!userPromptText) {
+                feedbackArea.textContent = "Please type a prompt for Digit!";
+                setCharacterState('confused', "You need to give me instructions!");
+                return;
+            }
+
+            setCharacterState('thinking');
+            feedbackArea.textContent = ""; 
+
+            const parsed = parsePrompt(userPromptText);
+            let promptFeedbackMessage = "";
+
+            if (!parsed.isClear || parsed.intent !== 'multiply') {
+                promptFeedbackMessage = "That prompt wasn't clear enough. ";
+                if (parsed.intent === 'multiply' && parsed.numbers.length < 2) {
+                    promptFeedbackMessage += `I need two numbers to multiply. Try 'solve ${currentProblem.num1} x ${currentProblem.num2}'.`;
+                } else if (parsed.intent !== 'multiply') {
+                    promptFeedbackMessage += `Are you asking me to multiply? Try using words like 'times' or 'x'.`;
+                } else { 
+                     promptFeedbackMessage += `Make sure you're asking about ${currentProblem.num1} and ${currentProblem.num2}. Example: 'Calculate ${currentProblem.num1} x ${currentProblem.num2}'.`;
+                }
+                setCharacterState('confused', promptFeedbackMessage);
+                feedbackArea.textContent = promptFeedbackMessage;
+                return;
+            }
+
+            score += 5; 
+            updateScoreDisplay();
+            promptFeedbackMessage = "Great prompt! Very clear. ";
+            if (parsed.keywords.includes('quickly')) promptFeedbackMessage += "And so fast! ";
+            if (parsed.keywords.includes('magic')) promptFeedbackMessage += "Using my math magic! ";
+
+            feedbackArea.textContent = promptFeedbackMessage + "Now, what do YOU think the answer is?";
+            setCharacterState('thinking', promptFeedbackMessage + `What do you think ${currentProblem.num1} x ${currentProblem.num2} is?`);
+            switchToAnswerMode();
+        }
+
+        function handleCheckAnswer() {
+            const userAnswerText = userAnswerInput.value.trim();
+            if (userAnswerText === "") {
+                feedbackArea.textContent = "Please type your answer!";
+                setCharacterState('confused', "Don't forget to type your answer!");
+                return;
+            }
+            const userAnswer = parseInt(userAnswerText);
+
+            if (isNaN(userAnswer)) {
+                feedbackArea.textContent = "Please enter a number for your answer.";
+                setCharacterState('confused', "That doesn't look like a number. Try again!");
+                return;
+            }
+
+            const correctAnswer = currentProblem.answer;
+            let resultMessage = "";
+
+            if (userAnswer === correctAnswer) {
+                score += 10; 
+                resultMessage = `Yes! ${currentProblem.num1} x ${currentProblem.num2} = ${correctAnswer}! You're a math whiz and a prompt master!`;
+                setCharacterState('correct', `Amazing! ${correctAnswer} is right! You earned 10 extra points!`);
+            } else {
+                resultMessage = `Almost! The correct answer to ${currentProblem.num1} x ${currentProblem.num2} is ${correctAnswer}. Your prompt was excellent, though! Keep practicing the tables!`;
+                setCharacterState('happy', `Good try! The answer is ${correctAnswer}. Your prompt was great!`);
+            }
+            feedbackArea.textContent = resultMessage;
+            updateScoreDisplay();
+
+            const currentMaxLevel = Object.keys(problemsByLevel).length;
+            if (score > 0 && score % 50 === 0 && level < currentMaxLevel) { 
+                level++;
+                setTimeout(() => { 
+                    feedbackArea.textContent += ` You also leveled up to Level ${level}! New challenges await!`;
+                    setCharacterState('happy', `Wow! Level ${level}! You're a Prompt Pro!`);
+                    updatePromptTips(); // Update tips for the new level
+                }, 1500);
+            } else if (level >= currentMaxLevel && score % 50 === 0 && score > 0) { // If at max level, congratulate
+                 setTimeout(() => {
+                    feedbackArea.textContent += ` You're a Times Table Titan at Level ${level}! Keep practicing!`;
+                    setCharacterState('happy', `Awesome! You've mastered all the levels!`);
+                }, 1500);
+            }
+
+            setTimeout(() => {
+                generateProblem(); 
+            }, 4000); 
+        }
+
+        submitButton.addEventListener('click', () => {
+            if (gameStage === 'prompting') {
+                handleSubmitPrompt();
+            } else if (gameStage === 'answering') {
+                handleCheckAnswer();
+            }
+        });
+
+        promptInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && gameStage === 'prompting') {
+                handleSubmitPrompt();
+            }
+        });
+        userAnswerInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && gameStage === 'answering') {
+                handleCheckAnswer();
+            }
+        });
+
+        promptTipsButton.addEventListener('click', () => {
+            tipsModal.style.display = 'flex';
+        });
+        closeModalButton.addEventListener('click', () => {
+            tipsModal.style.display = 'none';
+        });
+        window.addEventListener('click', (event) => {
+            if (event.target === tipsModal) {
+                tipsModal.style.display = 'none';
+            }
+        });
+
+        // Initial setup
+        generateProblem(); 
+        updateScoreDisplay();
+    </script>
+</body>
+</html>
