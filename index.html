@@ -58,6 +58,16 @@
         .or-divider::before, .or-divider::after { content: ''; flex: 1; border-bottom: 1px solid #d1d5db; }
         .or-divider:not(:empty)::before { margin-right: .25em; }
         .or-divider:not(:empty)::after { margin-left: .25em; }
+
+        /* Leaderboard Styles */
+        .leaderboard-container { margin-top: 24px; padding: 16px; background-color: #e0f2fe; border-radius: 12px; }
+        .leaderboard-container h3 { font-family: 'Baloo 2', cursive; color: #1e3a8a; font-size: 1.5rem; margin-bottom: 12px; }
+        .leaderboard-list { list-style: none; padding: 0; }
+        .leaderboard-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #bfdbfe; font-size: 0.95rem; }
+        .leaderboard-list li:last-child { border-bottom: none; }
+        .leaderboard-list .rank { font-weight: 700; color: #1d4ed8; margin-right: 10px;}
+        .leaderboard-list .name { flex-grow: 1; text-align: left; }
+        .leaderboard-list .score { font-weight: 600; }
     </style>
 </head>
 <body>
@@ -81,7 +91,8 @@
                 Sign in with Google
             </button>
             <div id="authError" class="text-red-500 text-sm mt-2"></div>
-            <div id="authMessage" class="text-green-600 text-sm mt-2"></div> </div>
+            <div id="authMessage" class="text-green-600 text-sm mt-2"></div>
+        </div>
 
         <div id="gameContent" style="display: none;">
             <div class="character-area">
@@ -100,6 +111,13 @@
                 <button id="promptTipsButton" class="prompt-tips-button">Show Prompt Tips ✨</button>
                 <button id="logoutButton" class="logout-button">Logout</button>
             </div>
+
+            <div id="leaderboardContainer" class="leaderboard-container" style="display: none;">
+                <h3>🏆 Top Players 🏆</h3>
+                <ul id="leaderboardList" class="leaderboard-list">
+                    </ul>
+                <button id="refreshLeaderboardButton" class="auth-button mt-3">Refresh Leaderboard</button>
+            </div>
         </div>
     </div>
 
@@ -114,8 +132,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const firebaseConfig = {
-              apiKey: "AIzaSyB9fjyUgT0nzU489rgcC8ImpQATmnHovi0", // These are example keys from previous user input
-              authDomain: "timestablepromptengineering.firebaseapp.com", // Ensure these are your actual keys
+              apiKey: "AIzaSyB9fjyUgT0nzU489rgcC8ImpQATmnHovi0",
+              authDomain: "timestablepromptengineering.firebaseapp.com",
               projectId: "timestablepromptengineering",
               storageBucket: "timestablepromptengineering.firebasestorage.app",
               messagingSenderId: "481345272281",
@@ -159,9 +177,13 @@
             const loginButton = document.getElementById('loginButton');
             const logoutButton = document.getElementById('logoutButton');
             const authErrorDiv = document.getElementById('authError');
-            const authMessageDiv = document.getElementById('authMessage'); // For general auth messages
+            const authMessageDiv = document.getElementById('authMessage');
             const googleSignInButton = document.getElementById('googleSignInButton');
-            const forgotPasswordLink = document.getElementById('forgotPasswordLink'); // New element
+            const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+            const leaderboardContainer = document.getElementById('leaderboardContainer');
+            const leaderboardList = document.getElementById('leaderboardList');
+            const refreshLeaderboardButton = document.getElementById('refreshLeaderboardButton');
+
 
             let score = 0, level = 1, currentProblem = null, gameStage = 'prompting';
             let currentMathStreak = 0, successfulPrompts = 0, correctMathAnswers = 0;
@@ -172,18 +194,76 @@
             }
             let achievements = getInitialAchievementsState();
             const characterEmojis = { /* ... same ... */ idle: '🧠', thinking: '🤔', happy: '🥳', confused: '😕', correct: '🤩', celebrate: '🎉' };
-            const problemsByLevel = { /* ... same ... */ 1: [ { num1: 2, num2: 3 }, { num1: 5, num2: 2 }], 2: [ { num1: 3, num2: 4 }], 3: [ { num1: 7, num2: 3 }], 4: [ { num1: 11, num2: 2 }], 5: [ { num1: 12, num2: 12 }] };
+            const problemsByLevel = { /* ... same ... */ 1: [ { num1: 2, num2: 3 }, { num1: 5, num2: 2 }, { num1: 10, num2: 4}], 2: [ { num1: 3, num2: 4 }, { num1: 4, num2: 5 }, { num1: 6, num2: 3 }], 3: [ { num1: 7, num2: 3 }, { num1: 8, num2: 4 }, { num1: 9, num2: 2 }], 4: [ { num1: 11, num2: 2 }, { num1: 12, num2: 3 }, { num1: 11, num2: 5 }], 5: [ { num1: 7, num2: 11 }, { num1: 9, num2: 12 }, { num1: 12, num2: 12 }] };
             const promptTipsByLevel = { /* ... same ... */ 1:["Tip L1"], 2:["Tip L2"], 3:["Tip L3"], 4:["Tip L4"], 5:["Tip L5"]};
 
-            async function saveUserProgress(userId) { /* ... same ... */ 
+            async function saveUserProgress(userId) {
                 if (!userId) { console.log("saveUserProgress: No userId provided."); return; }
                 const progressData = { score, level, currentMathStreak, successfulPrompts, correctMathAnswers, achievements };
                 try {
                     await db.collection('userProgress').doc(userId).set(progressData, { merge: true });
                     console.log("Progress saved for user:", userId);
+                    // After saving general progress, update leaderboard entry
+                    await updateLeaderboardEntry(userId, score, currentUser.displayName || currentUser.email.split('@')[0]);
                 } catch (error) { console.error("Error saving progress:", error); }
             }
-            async function loadUserProgress(userId) { /* ... same ... */ 
+
+            async function updateLeaderboardEntry(userId, currentScore, displayName) {
+                if (!userId) return;
+                const leaderboardRef = db.collection('leaderboard').doc(userId);
+                try {
+                    const doc = await leaderboardRef.get();
+                    if (!doc.exists || (doc.exists && doc.data().score < currentScore)) {
+                        await leaderboardRef.set({
+                            userId: userId,
+                            displayName: displayName,
+                            score: currentScore,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        console.log(`Leaderboard updated for ${displayName} with score ${currentScore}`);
+                        await loadLeaderboard(); // Refresh leaderboard display after update
+                    }
+                } catch (error) {
+                    console.error("Error updating leaderboard:", error);
+                }
+            }
+
+            async function loadLeaderboard() {
+                if (!currentUser) { // Don't load if no user is logged in
+                     leaderboardContainer.style.display = 'none';
+                     return;
+                }
+                leaderboardContainer.style.display = 'block'; // Show it when loading
+                leaderboardList.innerHTML = '<li>Loading...</li>'; // Placeholder
+                try {
+                    const snapshot = await db.collection('leaderboard')
+                                           .orderBy('score', 'desc')
+                                           .limit(10) // Get top 10
+                                           .get();
+                    leaderboardList.innerHTML = ''; // Clear previous entries
+                    if (snapshot.empty) {
+                        leaderboardList.innerHTML = '<li>No players on the leaderboard yet!</li>';
+                        return;
+                    }
+                    let rank = 1;
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `
+                            <span class="rank">#${rank++}</span>
+                            <span class="name">${data.displayName || 'Anonymous'}</span>
+                            <span class="score">${data.score} pts</span>
+                        `;
+                        leaderboardList.appendChild(listItem);
+                    });
+                } catch (error) {
+                    console.error("Error loading leaderboard:", error);
+                    leaderboardList.innerHTML = '<li>Error loading leaderboard.</li>';
+                }
+            }
+
+
+            async function loadUserProgress(userId) { 
                 if (!userId) { resetLocalGameState(); updateUIFromState(); generateProblem(); return; }
                 try {
                     const doc = await db.collection('userProgress').doc(userId).get();
@@ -201,57 +281,43 @@
                         console.log("Progress loaded:", data);
                     } else {
                         console.log("No progress for new user, saving initial state.");
-                        resetLocalGameState(); await saveUserProgress(userId);
+                        resetLocalGameState(); await saveUserProgress(userId); // saveUserProgress will also call updateLeaderboardEntry
                     }
                 } catch (error) { console.error("Error loading progress:", error); resetLocalGameState(); }
-                updateUIFromState(); generateProblem();
+                updateUIFromState();
+                await loadLeaderboard(); // Load leaderboard after user progress is loaded/set
+                generateProblem();
             }
-            function updateUIFromState() { /* ... same ... */ updateScoreDisplay(); updateStreakDisplay(); updatePromptTips(); }
+            function updateUIFromState() { updateScoreDisplay(); updateStreakDisplay(); updatePromptTips(); }
 
-            signUpButton.addEventListener('click', () => { /* ... same ... */ 
+            signUpButton.addEventListener('click', () => { 
                 const email = emailInput.value; const password = passwordInput.value; authErrorDiv.textContent = ""; authMessageDiv.textContent = "";
                  auth.createUserWithEmailAndPassword(email, password)
                     .then((userCredential) => { console.log("Signed up:", userCredential.user); authMessageDiv.textContent = "Sign up successful! You are now logged in."; })
                     .catch((error) => { authErrorDiv.textContent = error.message; });
             });
-            loginButton.addEventListener('click', () => { /* ... same ... */ 
+            loginButton.addEventListener('click', () => { 
                 const email = emailInput.value; const password = passwordInput.value; authErrorDiv.textContent = ""; authMessageDiv.textContent = "";
                 auth.signInWithEmailAndPassword(email, password)
                     .then((userCredential) => { console.log("Logged in:", userCredential.user); authMessageDiv.textContent = "Login successful!"; })
                     .catch((error) => { authErrorDiv.textContent = error.message; });
             });
-            googleSignInButton.addEventListener('click', () => { /* ... same signInWithPopup ... */ 
+            googleSignInButton.addEventListener('click', () => { 
                 const provider = new firebase.auth.GoogleAuthProvider(); authErrorDiv.textContent = ""; authMessageDiv.textContent = "";
                 auth.signInWithPopup(provider)
                     .then((result) => { console.log("Google Sign-In successful:", result.user); authMessageDiv.textContent = "Google Sign-In successful!";})
                     .catch((error) => { authErrorDiv.textContent = `Google Sign-In Error: ${error.message}`; });
             });
-            
-            forgotPasswordLink.addEventListener('click', (e) => {
-                e.preventDefault(); // Prevent default link behavior
-                const email = emailInput.value;
-                authErrorDiv.textContent = ""; 
-                authMessageDiv.textContent = "";
-
-                if (!email) {
-                    authErrorDiv.textContent = "Please enter your email address in the email field first.";
-                    return;
-                }
-
+            forgotPasswordLink.addEventListener('click', (e) => { /* ... same ... */ 
+                e.preventDefault(); const email = emailInput.value; authErrorDiv.textContent = ""; authMessageDiv.textContent = "";
+                if (!email) { authErrorDiv.textContent = "Please enter your email address."; return; }
                 auth.sendPasswordResetEmail(email)
-                    .then(() => {
-                        authMessageDiv.textContent = `Password reset email sent to ${email}. Please check your inbox (and spam folder).`;
-                        console.log("Password reset email sent to:", email);
-                    })
-                    .catch((error) => {
-                        authErrorDiv.textContent = `Error sending password reset email: ${error.message}`;
-                        console.error("Password reset error:", error);
-                    });
+                    .then(() => { authMessageDiv.textContent = `Password reset email sent to ${email}.`; })
+                    .catch((error) => { authErrorDiv.textContent = `Error: ${error.message}`; });
             });
-
-            logoutButton.addEventListener('click', async () => { /* ... same ... */ 
-                if (currentUser) { await saveUserProgress(currentUser.uid); }
-                auth.signOut().then(() => { console.log("Signed out"); authMessageDiv.textContent = "You have been signed out."; })
+            logoutButton.addEventListener('click', async () => { 
+                if (currentUser) { await saveUserProgress(currentUser.uid); } // Save progress before logout
+                auth.signOut().then(() => { console.log("Signed out"); authMessageDiv.textContent = "You have been signed out."; leaderboardContainer.style.display = 'none'; })
                     .catch((error) => { console.error("Sign out error:", error); });
             });
 
@@ -261,33 +327,34 @@
                     userStatusDiv.textContent = `Signed in as: ${user.displayName || user.email}`;
                     authContainer.style.display = 'none';
                     gameContentDiv.style.display = 'block';
-                    authErrorDiv.textContent = ""; authMessageDiv.textContent = ""; // Clear messages on auth change
+                    authErrorDiv.textContent = ""; authMessageDiv.textContent = "";
                     await loadUserProgress(user.uid); 
                 } else {
                     currentUser = null;
-                    userStatusDiv.textContent = "You are not signed in. Sign up or Login to save progress!";
+                    userStatusDiv.textContent = "You are not signed in.";
                     authContainer.style.display = 'block';
                     gameContentDiv.style.display = 'none';
+                    leaderboardContainer.style.display = 'none'; // Hide leaderboard when logged out
                     resetLocalGameState(); 
                     updateUIFromState(); 
                 }
             });
             
-            function resetLocalGameState() { /* ... same ... */ 
+            function resetLocalGameState() { 
                 score = 0; level = 1; currentMathStreak = 0; successfulPrompts = 0; correctMathAnswers = 0;
                 achievements = getInitialAchievementsState(); 
             }
 
-            function updateScoreDisplay() { /* ... same ... */ scoreArea.textContent = `Score: ${score} | Level: ${level}`; }
-            function updateStreakDisplay() { /* ... same ... */ streakCounter.textContent = currentMathStreak >= 2 ? `🔥 ${currentMathStreak} in a row!` : ""; }
-            function notifyAchievement(achievement) { /* ... same ... */ 
+            function updateScoreDisplay() { scoreArea.textContent = `Score: ${score} | Level: ${level}`; }
+            function updateStreakDisplay() { streakCounter.textContent = currentMathStreak >= 2 ? `🔥 ${currentMathStreak} in a row!` : ""; }
+            function notifyAchievement(achievement) { 
                 achievementNotification.textContent = `🏆 Achievement Unlocked: ${achievement.name} (${achievement.desc})`;
                 achievementNotification.style.display = 'block';
                 setTimeout(() => { achievementNotification.style.display = 'none'; }, 4000);
                 setCharacterState('celebrate', `Wow! ${achievement.name}`);
-                if (currentUser) saveUserProgress(currentUser.uid); 
+                if (currentUser) saveUserProgress(currentUser.uid); // saveUserProgress will update leaderboard
             }
-            function checkAchievements() { /* ... same ... */ 
+            function checkAchievements() { 
                  let newAchievementEarnedThisCheck = false;
                 for (const key in achievements) {
                     const ach = achievements[key];
@@ -301,7 +368,7 @@
                     }
                 }
             }
-            function checkTableMasterAchievements(isCorrect) { /* ... same ... */ 
+            function checkTableMasterAchievements(isCorrect) { 
                 if (!isCorrect || !currentProblem || !currentUser) return;
                 for (const key in achievements) {
                     const ach = achievements[key];
@@ -309,21 +376,21 @@
                         (currentProblem.num1 === ach.targetTable || currentProblem.num2 === ach.targetTable)) {
                         ach.count = (ach.count || 0) + 1;
                         if (ach.count >= ach.needed) { ach.earned = true; notifyAchievement(ach);
-                        } else if (currentUser) { saveUserProgress(currentUser.uid); }
+                        } else if (currentUser) { saveUserProgress(currentUser.uid); } // Save updated count
                     }
                 }
             }
-            function setCharacterState(state, message = "") { /* ... same ... */ 
+            function setCharacterState(state, message = "") { 
                 character.textContent = characterEmojis[state] || characterEmojis.idle;
                 character.className = 'character-image'; 
                 if (Object.keys(characterEmojis).includes(state)) { character.classList.add(state); }
                 speechBubble.textContent = message || getDefaultMessageForState(state);
             }
-            function getDefaultMessageForState(state) {  /* ... same ... */ 
+            function getDefaultMessageForState(state) {  
                 let userName = "Friend"; if (currentUser) { userName = currentUser.displayName ? currentUser.displayName.split(' ')[0] : currentUser.email.split('@')[0]; }
                 switch (state) { case 'thinking': return "Hmm..."; case 'happy': return "Got it!"; case 'confused': return "Confused..."; case 'correct': return "Amazing!"; case 'celebrate': return "Woohoo!"; default: return `Hi ${userName}! Let's play!`; }
             }
-            function generateProblem() {  /* ... same ... */ 
+            function generateProblem() {  
                 if (!currentUser) { return; }
                 const currentMaxLevel = Object.keys(problemsByLevel).length; if (level > currentMaxLevel) level = currentMaxLevel; 
                 const levelProblems = problemsByLevel[level] || problemsByLevel[1]; const problemIndex = Math.floor(Math.random() * levelProblems.length);
@@ -333,12 +400,12 @@
                 problemStatement.textContent = problemText; feedbackArea.textContent = ""; promptInput.value = ""; userAnswerInput.value = "";
                 switchToPromptMode(); setCharacterState('idle'); updateUIFromState(); 
             }
-            function updatePromptTips() {  /* ... same ... */ 
+            function updatePromptTips() {  
                 const currentMaxLevel = Object.keys(promptTipsByLevel).length; let tipsLevel = level > currentMaxLevel ? currentMaxLevel : level;
                 const currentTips = promptTipsByLevel[tipsLevel] || promptTipsByLevel[1]; tipsList.innerHTML = '';
                 currentTips.forEach(tip => { const li = document.createElement('li'); li.textContent = tip; tipsList.appendChild(li); });
             }
-            function parsePrompt(promptText) { /* ... same ... */ 
+            function parsePrompt(promptText) { 
                 promptText = promptText.toLowerCase(); const result = { numbers: [], intent: null, keywords: [], isClear: false };
                 const numberMatches = promptText.match(/\d+/g); if (numberMatches) result.numbers = numberMatches.map(Number);
                 if (promptText.includes('x') || promptText.includes('*') || promptText.includes('times') || promptText.includes('multiply')) result.intent = 'multiply';
@@ -348,19 +415,24 @@
                     if (problemNums[0] === promptNumsSorted[0] && problemNums[1] === promptNumsSorted[1]) result.isClear = true;
                 } return result;
             }
-            function switchToAnswerMode() { /* ... same ... */ gameStage = 'answering'; promptInput.style.display = 'none'; userAnswerInput.style.display = 'block'; userAnswerInput.focus(); submitButton.textContent = 'Check My Answer!'; }
-            function switchToPromptMode() { /* ... same ... */ gameStage = 'prompting'; promptInput.style.display = 'block'; userAnswerInput.style.display = 'none'; promptInput.focus(); submitButton.textContent = 'Send Prompt!'; }
-            function handleSubmitPrompt() { /* ... same, ensure saveUserProgress call is present */ 
+            function switchToAnswerMode() { gameStage = 'answering'; promptInput.style.display = 'none'; userAnswerInput.style.display = 'block'; userAnswerInput.focus(); submitButton.textContent = 'Check My Answer!'; }
+            function switchToPromptMode() { gameStage = 'prompting'; promptInput.style.display = 'block'; userAnswerInput.style.display = 'none'; promptInput.focus(); submitButton.textContent = 'Send Prompt!'; }
+            
+            function handleSubmitPrompt() { 
                  if (!currentUser || !currentProblem) return; const userPromptText = promptInput.value.trim();
                 if (!userPromptText) { feedbackArea.textContent = "Type a prompt!"; setCharacterState('confused'); return; }
                 setCharacterState('thinking'); feedbackArea.textContent = ""; const parsed = parsePrompt(userPromptText); let promptFeedbackMessage = "";
                 if (!parsed.isClear || parsed.intent !== 'multiply') { promptFeedbackMessage = "Hmm, that prompt wasn't quite right."; setCharacterState('confused', promptFeedbackMessage); feedbackArea.textContent = promptFeedbackMessage; return; }
                 successfulPrompts++; score += 5; if (parsed.keywords.length > 0) { score += 2; promptFeedbackMessage = "Awesome power prompt! "; } else { promptFeedbackMessage = "Great prompt! "; }
-                updateScoreDisplay(); checkAchievements(); if (currentUser) saveUserProgress(currentUser.uid); 
+                updateScoreDisplay(); checkAchievements(); // This will call saveUserProgress if an achievement is unlocked
+                // Explicitly save progress here if no achievement was unlocked but score changed
+                if (currentUser && !achievements.SCORE_HERO_100.earned && !achievements.PROMPT_ROOKIE.earned) { // Example condition
+                    saveUserProgress(currentUser.uid); 
+                }
                 feedbackArea.textContent = promptFeedbackMessage + "Now, what's the answer?";
                 setCharacterState('thinking', promptFeedbackMessage + `What is ${currentProblem.num1} x ${currentProblem.num2}?`); switchToAnswerMode();
             }
-            function handleCheckAnswer() { /* ... same, ensure saveUserProgress call is present */ 
+            function handleCheckAnswer() { 
                 if (!currentUser || !currentProblem) return; const userAnswerText = userAnswerInput.value.trim();
                 if (userAnswerText === "") { feedbackArea.textContent = "Type your answer!"; setCharacterState('confused'); currentMathStreak = 0; updateStreakDisplay(); return; }
                 const userAnswer = parseInt(userAnswerText);
@@ -375,8 +447,17 @@
                 const oldLevel = level; const currentMaxAppLevel = Object.keys(problemsByLevel).length;
                 if (score >= level * 50 && level < currentMaxAppLevel) level++;
                 if (level > oldLevel) { setTimeout(() => { feedbackArea.textContent += ` 🎉 LEVEL UP! Level ${level}! 🎉`; setCharacterState('celebrate', `Woohoo! LEVEL ${level}!`); updatePromptTips(); checkAchievements(); }, 1500); }
-                if (currentUser) saveUserProgress(currentUser.uid); setTimeout(() => { generateProblem(); }, 4500);
+                if (currentUser) saveUserProgress(currentUser.uid); 
+                setTimeout(() => { generateProblem(); }, 4500);
             }
+
+            refreshLeaderboardButton.addEventListener('click', async () => {
+                if (currentUser) {
+                    await loadLeaderboard();
+                } else {
+                    leaderboardList.innerHTML = '<li>Please log in to see the leaderboard.</li>';
+                }
+            });
 
             submitButton.addEventListener('click', () => { if (!currentUser) { authErrorDiv.textContent = "Please sign in."; return; } if (gameStage === 'prompting') handleSubmitPrompt(); else if (gameStage === 'answering') handleCheckAnswer(); });
             promptInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && gameStage === 'prompting' && currentUser) handleSubmitPrompt(); });
