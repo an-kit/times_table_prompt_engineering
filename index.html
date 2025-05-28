@@ -6,262 +6,102 @@
     <title>Math Mates & Prompt Powers</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Baloo+2:wght@400;700&display=swap" rel="stylesheet">
+
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f9ff;
-            color: #1e3a8a;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 16px;
-            overflow-x: hidden;
-        }
-        .app-container {
-            background-color: #ffffff;
-            border-radius: 24px;
-            padding: 24px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 600px;
-            text-align: center;
-        }
-        .title-header {
-            font-family: 'Baloo 2', cursive;
-            color: #2563eb;
-            font-size: 2.5rem;
-            margin-bottom: 24px;
-        }
-        .character-area {
-            margin-bottom: 24px;
-            position: relative;
-            height: 150px;
-        }
-        .character-image {
-            width: 100px;
-            height: 100px;
-            background-color: #93c5fd;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 12px;
-            font-size: 3rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #1e3a8a; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 16px; overflow-x: hidden; }
+        .app-container { background-color: #ffffff; border-radius: 24px; padding: 24px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); width: 100%; max-width: 600px; text-align: center; }
+        .title-header { font-family: 'Baloo 2', cursive; color: #2563eb; font-size: 2.5rem; margin-bottom: 16px; }
+        .character-area { margin-bottom: 16px; position: relative; height: 130px; } /* Adjusted height */
+        .character-image { width: 80px; height: 80px; background-color: #93c5fd; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 2.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s ease; }
         .character-image.happy { transform: scale(1.1) rotate(5deg); }
         .character-image.thinking { transform: scale(1.05) rotate(-3deg); }
         .character-image.confused { animation: shake 0.5s; }
         .character-image.celebrate { animation: celebrate_anim 0.8s ease-in-out; }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-        @keyframes celebrate_anim {
-            0% { transform: scale(1) rotate(0deg); }
-            25% { transform: scale(1.2) rotate(-10deg); }
-            50% { transform: scale(1.1) rotate(10deg); }
-            75% { transform: scale(1.2) rotate(-5deg); }
-            100% { transform: scale(1) rotate(0deg); }
-        }
-
-        .speech-bubble {
-            background-color: #e0f2fe;
-            color: #0c4a6e;
-            padding: 12px 18px;
-            border-radius: 16px;
-            position: relative;
-            display: inline-block;
-            max-width: 90%;
-            min-height: 40px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            font-size: 0.9rem;
-        }
-        .speech-bubble::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-            border-top: 10px solid #e0f2fe;
-        }
-
-        .problem-statement, .feedback-area {
-            font-size: 1.25rem;
-            margin-bottom: 20px;
-            color: #172554;
-            min-height: 30px;
-        }
-        .achievement-notification {
-            background-color: #fef9c3; /* Light yellow */
-            color: #713f12; /* Amber text */
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            display: none; /* Hidden by default */
-            border: 1px solid #fde68a;
-        }
-        .input-field {
-            width: 100%;
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: 2px solid #60a5fa;
-            margin-bottom: 16px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        .input-field:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-            outline: none;
-        }
-        #userAnswerInput {
-            display: none;
-        }
-        .submit-button {
-            background-color: #2563eb;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
-        }
-        .submit-button:hover {
-            background-color: #1d4ed8;
-            transform: translateY(-2px);
-        }
-        .submit-button:active {
-            transform: translateY(0);
-        }
-        .score-area {
-            margin-top: 24px;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-        .streak-counter {
-            font-size: 0.9rem;
-            color: #166534; /* Green for streak */
-            font-weight: 600;
-            margin-top: 8px;
-            min-height: 20px; /* Ensure space even if empty */
-        }
-        .prompt-tips-button {
-            background-color: #fbbf24;
-            color: #78350f;
-            padding: 10px 18px;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: background-color 0.3s ease;
-        }
-        .prompt-tips-button:hover {
-            background-color: #f59e0b;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5);
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: #fff;
-            margin: auto;
-            padding: 24px;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            color: #1e3a8a;
-        }
-        .modal-content h3 {
-            font-family: 'Baloo 2', cursive;
-            color: #2563eb;
-            margin-top: 0;
-            font-size: 1.8rem;
-        }
-        .modal-content ul {
-            list-style-type: '✨ ';
-            padding-left: 20px;
-        }
-        .modal-content li {
-            margin-bottom: 10px;
-            font-size: 1rem;
-        }
-        .close-button {
-            background-color: #ef4444;
-            color: white;
-            padding: 10px 18px;
-            border: none;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 16px;
-            float: right;
-            transition: background-color 0.3s ease;
-        }
-        .close-button:hover {
-            background-color: #dc2626;
-        }
-
-        @media (max-width: 480px) {
-            .title-header { font-size: 2rem; }
-            .problem-statement, .feedback-area { font-size: 1.1rem; }
-            .input-field { font-size: 0.9rem; }
-            .submit-button { font-size: 1rem; padding: 10px 20px;}
-            .character-image { width: 80px; height: 80px; font-size: 2.5rem; }
-            .character-area { height: 130px; }
-            .speech-bubble { padding: 10px 14px; font-size: 0.85rem; }
-            .app-container { padding: 16px; }
-        }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        @keyframes celebrate_anim { 0% { transform: scale(1) rotate(0deg); } 25% { transform: scale(1.2) rotate(-10deg); } 50% { transform: scale(1.1) rotate(10deg); } 75% { transform: scale(1.2) rotate(-5deg); } 100% { transform: scale(1) rotate(0deg); } }
+        .speech-bubble { background-color: #e0f2fe; color: #0c4a6e; padding: 10px 14px; border-radius: 16px; position: relative; display: inline-block; max-width: 90%; min-height: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 0.85rem; }
+        .speech-bubble::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid #e0f2fe; }
+        .problem-statement, .feedback-area { font-size: 1.1rem; margin-bottom: 15px; color: #172554; min-height: 25px; }
+        .achievement-notification { background-color: #fef9c3; color: #713f12; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; margin-bottom: 15px; display: none; border: 1px solid #fde68a; }
+        .input-field, .auth-input { width: 100%; padding: 10px 14px; border-radius: 12px; border: 2px solid #60a5fa; margin-bottom: 10px; font-size: 0.9rem; box-sizing: border-box; transition: border-color 0.3s ease, box-shadow 0.3s ease; }
+        .input-field:focus, .auth-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); outline: none; }
+        #userAnswerInput { display: none; }
+        .auth-container { background-color: #eff6ff; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
+        .auth-container h3 { font-family: 'Baloo 2', cursive; color: #1e3a8a; font-size: 1.3rem; margin-top: 0; margin-bottom: 12px; }
+        .auth-form label { display: block; text-align: left; font-size: 0.85rem; margin-bottom: 4px; color: #374151; }
+        .auth-button, .submit-button, .prompt-tips-button, .logout-button, .google-signin-button { background-color: #2563eb; color: white; padding: 10px 20px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s ease; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); margin-top: 5px; margin-right: 5px;}
+        .auth-button:hover, .submit-button:hover, .prompt-tips-button:hover, .logout-button:hover, .google-signin-button:hover { background-color: #1d4ed8; transform: translateY(-2px); }
+        .auth-button:active, .submit-button:active, .logout-button:active, .google-signin-button:active { transform: translateY(0); }
+        .logout-button { background-color: #ef4444; }
+        .logout-button:hover { background-color: #dc2626; }
+        .google-signin-button { background-color: #4285F4; margin-top: 10px; width: calc(100% - 10px); /* Adjusted width */ display: flex; align-items: center; justify-content: center; }
+        .google-signin-button:hover { background-color: #357ae8; }
+        .google-signin-button svg { width: 18px; height: 18px; margin-right: 8px; }
+        .user-status { font-size: 0.9rem; margin-bottom: 16px; padding: 8px; background-color: #e0e7ff; border-radius: 8px; color: #1e40af;}
+        .game-content { /* Initially hidden until user logs in */ }
+        .score-area { margin-top: 16px; font-size: 1.1rem; font-weight: 600; }
+        .streak-counter { font-size: 0.9rem; color: #166534; font-weight: 600; margin-top: 6px; min-height: 18px; }
+        .prompt-tips-button { background-color: #fbbf24; color: #78350f; font-size: 0.9rem; padding: 8px 16px;}
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+        .modal-content { background-color: #fff; margin: auto; padding: 20px; border-radius: 16px; width: 90%; max-width: 450px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); color: #1e3a8a; }
+        .modal-content h3 { font-family: 'Baloo 2', cursive; color: #2563eb; margin-top: 0; font-size: 1.5rem; }
+        .modal-content ul { list-style-type: '✨ '; padding-left: 18px; } .modal-content li { margin-bottom: 8px; font-size: 0.9rem; }
+        .close-button { background-color: #ef4444; color: white; padding: 8px 16px; border: none; border-radius: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin-top: 12px; float: right; transition: background-color 0.3s ease; }
+        .close-button:hover { background-color: #dc2626; }
+        .or-divider { display: flex; align-items: center; text-align: center; color: #6b7280; margin: 15px 0; }
+        .or-divider::before, .or-divider::after { content: ''; flex: 1; border-bottom: 1px solid #d1d5db; }
+        .or-divider:not(:empty)::before { margin-right: .25em; }
+        .or-divider:not(:empty)::after { margin-left: .25em; }
     </style>
 </head>
 <body>
     <div class="app-container">
         <h1 class="title-header">Math Mates & Prompt Powers</h1>
 
-        <div class="character-area">
-            <div id="character" class="character-image">🧠</div>
-            <div class="speech-bubble" id="speechBubble">Hi! I'm Digit! Give me a times table problem to solve!</div>
+        <div id="userStatus" class="user-status">Connecting...</div>
+
+        <div id="authContainer" class="auth-container">
+            <h3>Create Account or Sign In</h3>
+            <div class="auth-form">
+                <label for="emailInput">Email:</label>
+                <input type="email" id="emailInput" class="auth-input" placeholder="your@email.com">
+                <label for="passwordInput">Password:</label>
+                <input type="password" id="passwordInput" class="auth-input" placeholder="Password (min. 6 chars)">
+                <button id="signUpButton" class="auth-button">Sign Up</button>
+                <button id="loginButton" class="auth-button">Login</button>
+            </div>
+            <div class="or-divider">OR</div>
+            <button id="googleSignInButton" class="google-signin-button">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
+                Sign in with Google
+            </button>
+            <div id="authError" class="text-red-500 text-sm mt-2"></div>
+            </div>
+
+        <div id="gameContent" style="display: none;"> <div class="character-area">
+                <div id="character" class="character-image">🧠</div>
+                <div class="speech-bubble" id="speechBubble">Hi! I'm Digit! Give me a times table problem to solve!</div>
+            </div>
+
+            <div id="achievementNotification" class="achievement-notification"></div>
+            <div id="problemStatement" class="problem-statement"></div>
+            <div id="feedbackArea" class="feedback-area"></div>
+
+            <input type="text" id="promptInput" class="input-field" placeholder="e.g., Digit, solve 2 x 3">
+            <input type="number" id="userAnswerInput" class="input-field" placeholder="Your answer...">
+            <button id="submitButton" class="submit-button">Send Prompt!</button>
+
+            <div id="scoreArea" class="score-area">Score: 0 | Level: 1</div>
+            <div id="streakCounter" class="streak-counter"></div>
+            <div class="mt-4">
+                <button id="promptTipsButton" class="prompt-tips-button">Show Prompt Tips ✨</button>
+                <button id="logoutButton" class="logout-button">Logout</button>
+            </div>
         </div>
-
-        <div id="achievementNotification" class="achievement-notification"></div>
-        <div id="problemStatement" class="problem-statement"></div>
-        <div id="feedbackArea" class="feedback-area"></div>
-
-        <input type="text" id="promptInput" class="input-field" placeholder="e.g., Digit, solve 2 x 3">
-        <input type="number" id="userAnswerInput" class="input-field" placeholder="Your answer...">
-        <button id="submitButton" class="submit-button">Send Prompt!</button>
-
-        <div id="scoreArea" class="score-area">Score: 0 | Level: 1</div>
-        <div id="streakCounter" class="streak-counter"></div>
-        <button id="promptTipsButton" class="prompt-tips-button">Show Prompt Tips ✨</button>
     </div>
 
     <div id="tipsModal" class="modal">
@@ -273,349 +113,299 @@
     </div>
 
     <script>
-        // DOM Elements
-        const character = document.getElementById('character');
-        const speechBubble = document.getElementById('speechBubble');
-        const problemStatement = document.getElementById('problemStatement');
-        const feedbackArea = document.getElementById('feedbackArea');
-        const promptInput = document.getElementById('promptInput');
-        const userAnswerInput = document.getElementById('userAnswerInput');
-        const submitButton = document.getElementById('submitButton');
-        const scoreArea = document.getElementById('scoreArea');
-        const streakCounter = document.getElementById('streakCounter'); // New element for streaks
-        const achievementNotification = document.getElementById('achievementNotification'); // New element for achievements
-        const promptTipsButton = document.getElementById('promptTipsButton');
-        const tipsModal = document.getElementById('tipsModal');
-        const closeModalButton = document.getElementById('closeModalButton');
-        const tipsList = document.getElementById('tipsList');
+        document.addEventListener('DOMContentLoaded', () => {
+            const firebaseConfig = {
+              apiKey: "AIzaSyB9fjyUgT0nzU489rgcC8ImpQATmnHovi0",
+              authDomain: "timestablepromptengineering.firebaseapp.com",
+              projectId: "timestablepromptengineering",
+              storageBucket: "timestablepromptengineering.firebasestorage.app",
+              messagingSenderId: "481345272281",
+              appId: "1:481345272281:web:e76c175eea9f61c1c941c8",
+              measurementId: "G-3HPYJEGDHW"
+            };
 
-        // Game State
-        let score = 0;
-        let level = 1;
-        let currentProblem = null;
-        let gameStage = 'prompting';
-        let currentMathStreak = 0; // For correct math answers
-        let successfulPrompts = 0; // For prompt-based achievements
-        let correctMathAnswers = 0; // For math-based achievements
-
-        const characterEmojis = {
-            idle: '🧠',
-            thinking: '🤔',
-            happy: '🥳',
-            confused: '😕',
-            correct: '�',
-            celebrate: '🎉' // For level ups, big achievements
-        };
-
-        // Achievements
-        const achievements = {
-            PROMPT_ROOKIE: { id: 'PROMPT_ROOKIE', name: "🚀 Prompt Rookie!", condition: () => successfulPrompts >= 5, earned: false, desc: "5 successful prompts!" },
-            PROMPT_EXPERT: { id: 'PROMPT_EXPERT', name: "✨ Prompt Expert!", condition: () => successfulPrompts >= 15, earned: false, desc: "15 successful prompts!" },
-            MATH_BEGINNER: { id: 'MATH_BEGINNER', name: "➕ Math Beginner!", condition: () => correctMathAnswers >= 10, earned: false, desc: "10 correct math answers!" },
-            SCORE_HERO_100: { id: 'SCORE_HERO_100', name: "💯 Score Hero: 100!", condition: () => score >= 100, earned: false, desc: "Reached 100 points!" },
-            LEVEL_UP_STAR_2: { id: 'LEVEL_UP_STAR_2', name: "⭐ Level 2 Star!", condition: () => level >= 2, earned: false, desc: "Reached Level 2!" },
-            TABLE_MASTER_2S: { id: 'TABLE_MASTER_2S', name: "🥈 Table Master: 2s!", targetTable: 2, count: 0, needed: 3, earned: false, desc: "Mastered three 2x problems!"},
-            TABLE_MASTER_5S: { id: 'TABLE_MASTER_5S', name: "🏅 Table Master: 5s!", targetTable: 5, count: 0, needed: 3, earned: false, desc: "Mastered three 5x problems!"}
-        };
-
-
-        function updateScoreDisplay() {
-            scoreArea.textContent = `Score: ${score} | Level: ${level}`;
-        }
-
-        function updateStreakDisplay() {
-            if (currentMathStreak >= 2) {
-                streakCounter.textContent = `🔥 ${currentMathStreak} in a row!`;
+            if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
+                 firebase.app();
             } else {
-                streakCounter.textContent = "";
+                console.error("Firebase SDK not loaded.");
+                document.getElementById('userStatus').textContent = "Error: Firebase not loaded.";
+                return;
             }
-        }
 
-        function notifyAchievement(achievement) {
-            achievementNotification.textContent = `🏆 Achievement Unlocked: ${achievement.name} (${achievement.desc})`;
-            achievementNotification.style.display = 'block';
-            setTimeout(() => {
-                achievementNotification.style.display = 'none';
-            }, 4000); // Hide after 4 seconds
-            setCharacterState('celebrate', `Wow! ${achievement.name}`);
-        }
+            const auth = firebase.auth();
+            // DOM Elements
+            const character = document.getElementById('character');
+            const speechBubble = document.getElementById('speechBubble');
+            const problemStatement = document.getElementById('problemStatement');
+            const feedbackArea = document.getElementById('feedbackArea');
+            const promptInput = document.getElementById('promptInput');
+            const userAnswerInput = document.getElementById('userAnswerInput');
+            const submitButton = document.getElementById('submitButton');
+            const scoreArea = document.getElementById('scoreArea');
+            const streakCounter = document.getElementById('streakCounter');
+            const achievementNotification = document.getElementById('achievementNotification');
+            const promptTipsButton = document.getElementById('promptTipsButton');
+            const tipsModal = document.getElementById('tipsModal');
+            const closeModalButton = document.getElementById('closeModalButton');
+            const tipsList = document.getElementById('tipsList');
+            const userStatusDiv = document.getElementById('userStatus');
+            const authContainer = document.getElementById('authContainer');
+            const gameContentDiv = document.getElementById('gameContent');
+            const emailInput = document.getElementById('emailInput');
+            const passwordInput = document.getElementById('passwordInput');
+            const signUpButton = document.getElementById('signUpButton');
+            const loginButton = document.getElementById('loginButton');
+            const logoutButton = document.getElementById('logoutButton');
+            const authErrorDiv = document.getElementById('authError');
+            const googleSignInButton = document.getElementById('googleSignInButton');
 
-        function checkAchievements() {
-            for (const key in achievements) {
-                const ach = achievements[key];
-                if (!ach.earned && ach.condition && ach.condition()) {
-                    ach.earned = true;
-                    notifyAchievement(ach);
+            // Game State
+            let score = 0, level = 1, currentProblem = null, gameStage = 'prompting';
+            let currentMathStreak = 0, successfulPrompts = 0, correctMathAnswers = 0;
+            let currentUser = null;
+
+            const characterEmojis = { idle: '🧠', thinking: '🤔', happy: '🥳', confused: '�', correct: '🤩', celebrate: '🎉' };
+            const achievements = {
+                PROMPT_ROOKIE: { id: 'PROMPT_ROOKIE', name: "🚀 Prompt Rookie!", condition: () => successfulPrompts >= 5, earned: false, desc: "5 successful prompts!" },
+                MATH_BEGINNER: { id: 'MATH_BEGINNER', name: "➕ Math Beginner!", condition: () => correctMathAnswers >= 10, earned: false, desc: "10 correct math answers!" },
+                SCORE_HERO_100: { id: 'SCORE_HERO_100', name: "💯 Score Hero: 100!", condition: () => score >= 100, earned: false, desc: "Reached 100 points!" },
+                LEVEL_UP_STAR_2: { id: 'LEVEL_UP_STAR_2', name: "⭐ Level 2 Star!", condition: () => level >= 2, earned: false, desc: "Reached Level 2!" },
+            };
+            const problemsByLevel = {
+                1: [ { num1: 2, num2: 3 }, { num1: 5, num2: 2 }, { num1: 10, num2: 4 }],
+                2: [ { num1: 3, num2: 4 }, { num1: 4, num2: 5 }, { num1: 6, num2: 3 }],
+                3: [ { num1: 7, num2: 3 }, { num1: 8, num2: 4 }, { num1: 9, num2: 2 }],
+                4: [ { num1: 11, num2: 2 }, { num1: 12, num2: 3 }, { num1: 11, num2: 5 }],
+                5: [ { num1: 7, num2: 11 }, { num1: 9, num2: 12 }, { num1: 12, num2: 12 }]
+            };
+            const promptTipsByLevel = {
+                1: [ "Be clear! Tell Digit exactly what numbers to multiply." ],
+                2: [ "You can use words like 'calculate' or 'solve'." ],
+                3: [ "For story problems, find the two numbers." ],
+                4: [ "The 11s and 12s tables are new! Focus on these." ],
+                5: [ "You're a pro! Mix and match your prompt styles." ]
+            };
+
+            // --- Authentication Logic ---
+            signUpButton.addEventListener('click', () => {
+                const email = emailInput.value;
+                const password = passwordInput.value;
+                authErrorDiv.textContent = "";
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => { console.log("Signed up:", userCredential.user); })
+                    .catch((error) => { authErrorDiv.textContent = error.message; console.error("Sign up error:", error); });
+            });
+
+            loginButton.addEventListener('click', () => {
+                const email = emailInput.value;
+                const password = passwordInput.value;
+                authErrorDiv.textContent = "";
+                auth.signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => { console.log("Logged in:", userCredential.user); })
+                    .catch((error) => { authErrorDiv.textContent = error.message; console.error("Login error:", error); });
+            });
+
+            googleSignInButton.addEventListener('click', () => {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                authErrorDiv.textContent = "";
+                // Reverted to signInWithPopup
+                auth.signInWithPopup(provider)
+                    .then((result) => {
+                        console.log("Google Sign-In successful:", result.user);
+                        // User will be handled by onAuthStateChanged
+                    })
+                    .catch((error) => {
+                        authErrorDiv.textContent = `Google Sign-In Error: ${error.message}`;
+                        console.error("Google Sign-In error:", error);
+                    });
+            });
+            
+            // Removed getRedirectResult() block as it's not needed for signInWithPopup
+
+            logoutButton.addEventListener('click', () => {
+                auth.signOut().then(() => { console.log("Signed out"); })
+                    .catch((error) => { console.error("Sign out error:", error); });
+            });
+
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    currentUser = user;
+                    userStatusDiv.textContent = `Signed in as: ${user.displayName || user.email}`;
+                    authContainer.style.display = 'none';
+                    gameContentDiv.style.display = 'block';
+                    authErrorDiv.textContent = "";
+                    resetGameStateForUser(); 
+                    generateProblem();
+                } else {
+                    currentUser = null;
+                    userStatusDiv.textContent = "You are not signed in. Sign up or Login to save progress!";
+                    authContainer.style.display = 'block';
+                    gameContentDiv.style.display = 'none';
+                    resetLocalGameState(); 
                 }
-                // Specific handling for table master achievements
-                if (!ach.earned && ach.targetTable && currentProblem &&
-                    (currentProblem.num1 === ach.targetTable || currentProblem.num2 === ach.targetTable)) {
-                    // This check should happen when an answer is correct
-                }
+            });
+            
+            function resetLocalGameState() {
+                score = 0; level = 1; currentMathStreak = 0; successfulPrompts = 0; correctMathAnswers = 0;
+                Object.values(achievements).forEach(ach => ach.earned = false);
+                updateScoreDisplay(); updateStreakDisplay();
             }
-        }
-        function checkTableMasterAchievements(isCorrect) {
-            if (!isCorrect || !currentProblem) return;
 
-            for (const key in achievements) {
-                const ach = achievements[key];
-                if (!ach.earned && ach.targetTable && (currentProblem.num1 === ach.targetTable || currentProblem.num2 === ach.targetTable)) {
-                    ach.count = (ach.count || 0) + 1;
-                    if (ach.count >= ach.needed) {
-                        ach.earned = true;
-                        notifyAchievement(ach);
+            function resetGameStateForUser() { resetLocalGameState(); }
+
+            // --- Game Logic Functions (Mostly same as before) ---
+            function updateScoreDisplay() { scoreArea.textContent = `Score: ${score} | Level: ${level}`; }
+            function updateStreakDisplay() { streakCounter.textContent = currentMathStreak >= 2 ? `🔥 ${currentMathStreak} in a row!` : ""; }
+            function notifyAchievement(achievement) { 
+                achievementNotification.textContent = `🏆 Achievement Unlocked: ${achievement.name} (${achievement.desc})`;
+                achievementNotification.style.display = 'block';
+                setTimeout(() => { achievementNotification.style.display = 'none'; }, 4000);
+                setCharacterState('celebrate', `Wow! ${achievement.name}`);
+            }
+            function checkAchievements() { 
+                for (const key in achievements) {
+                    const ach = achievements[key];
+                    if (!ach.earned && ach.condition && ach.condition()) {
+                        ach.earned = true; notifyAchievement(ach);
                     }
                 }
             }
-        }
 
-
-        const problemsByLevel = {
-            1: [ { num1: 2, num2: 3 }, { num1: 5, num2: 2 }, { num1: 10, num2: 4 }, { num1: 1, num2: 7 }, { num1: 0, num2: 5 }, { num1: 2, num2: 8 }, { num1: 5, num2: 6 }, { num1: 10, num2: 7}],
-            2: [ { num1: 3, num2: 4 }, { num1: 4, num2: 5 }, { num1: 6, num2: 3 }, { num1: 3, num2: 7 }, { num1: 4, num2: 6 }, { num1: 6, num2: 7 }, { num1: 3, num2: 9 }, { num1: 4, num2: 8 }],
-            3: [ { num1: 7, num2: 3 }, { num1: 8, num2: 4 }, { num1: 9, num2: 2 }, { num1: 7, num2: 6, story: "7 dragons have 6 gems each." }, { num1: 8, num2: 7, story: "8 knights guard 7 towers each." }, { num1: 9, num2: 5, story: "9 wizards brew 5 potions." }, { num1: 7, num2: 9 }, { num1: 8, num2: 6 }, { num1: 9, num2: 8 }],
-            4: [ { num1: 11, num2: 2 }, { num1: 12, num2: 3 }, { num1: 11, num2: 5 }, { num1: 12, num2: 4, story: "12 astronauts see 4 stars each." }, { num1: 11, num2: 7 }, { num1: 12, num2: 6 }, { num1: 6, num2: 11 }, { num1: 8, num2: 12 }],
-            5: [ { num1: 7, num2: 11 }, { num1: 9, num2: 12 }, { num1: 12, num2: 7 }, { num1: 11, num2: 11, story: "11 heroes have 11 gadgets." }, { num1: 8, num2: 9 }, { num1: 12, num2: 12 }, { num1: 6, num2: 8 }, { num1: 10, num2: 12 }, { num1: 4, num2: 11 }]
-        };
-        const promptTipsByLevel = {
-            1: [ "Be clear! Tell Digit exactly what numbers to multiply.", "Try: 'Digit, what is 2 times 5?'", "Make sure to include both numbers!" ],
-            2: [ "You can use words like 'calculate' or 'solve'.", "Example: 'Digit, please calculate 3 x 6.'", "Good prompts help Digit understand quickly!" ],
-            3: [ "For story problems, find the two numbers.", "Example: 'If 7 dragons have 6 gems, solve 7 x 6.'", "Using 'power words' like 'Quickly solve' can be fun!" ],
-            4: [ "The 11s and 12s tables are new! Focus on these.", "Try: 'Digit, super solve 11 times 4!'", "Clear instructions are key!" ],
-            5: [ "You're a pro! Mix and match your prompt styles.", "Challenge Digit with any times table up to 12 x 12.", "Example: 'Digit, what is 12 multiplied by 9?'" ]
-        };
-
-        function setCharacterState(state, message = "") {
-            character.textContent = characterEmojis[state] || characterEmojis.idle;
-            character.className = 'character-image'; 
-            if (Object.keys(characterEmojis).includes(state)) { // Ensure state is valid for animation
-                character.classList.add(state);
+            function setCharacterState(state, message = "") { 
+                character.textContent = characterEmojis[state] || characterEmojis.idle;
+                character.className = 'character-image'; 
+                if (Object.keys(characterEmojis).includes(state)) { character.classList.add(state); }
+                speechBubble.textContent = message || getDefaultMessageForState(state);
             }
-            speechBubble.textContent = message || getDefaultMessageForState(state);
-        }
-
-        function getDefaultMessageForState(state) {
-             switch (state) {
-                case 'thinking': return "Hmm, let me think...";
-                case 'happy': return "You got it!";
-                case 'confused': return "I'm a bit confused. Can you try rephrasing?";
-                case 'correct': return "That's amazing!";
-                case 'celebrate': return "Woohoo! That's awesome!";
-                default: return "Hi! I'm Digit! Ready for a challenge?";
-            }
-        }
-
-        function generateProblem() {
-            const currentMaxLevel = Object.keys(problemsByLevel).length;
-            if (level > currentMaxLevel) level = currentMaxLevel;
-
-            const levelProblems = problemsByLevel[level] || problemsByLevel[1];
-            const problemIndex = Math.floor(Math.random() * levelProblems.length);
-            currentProblem = levelProblems[problemIndex];
-            currentProblem.answer = currentProblem.num1 * currentProblem.num2;
-
-            let problemText = `Challenge: What is ${currentProblem.num1} x ${currentProblem.num2}?`;
-            if (currentProblem.story) {
-                 problemText = `Challenge: ${currentProblem.story} (This means ${currentProblem.num1} x ${currentProblem.num2}!)`;
-            }
-            problemStatement.textContent = problemText;
-
-            feedbackArea.textContent = "";
-            promptInput.value = "";
-            userAnswerInput.value = "";
-            switchToPromptMode();
-            setCharacterState('idle', `Okay, Level ${level}! ${currentProblem.story ? currentProblem.story : `What is ${currentProblem.num1} x ${currentProblem.num2}?`}`);
-            updatePromptTips();
-            checkAchievements(); // Check score/level based achievements at new problem
-        }
-
-        function updatePromptTips() {
-            const currentMaxLevel = Object.keys(promptTipsByLevel).length;
-            let tipsLevel = level > currentMaxLevel ? currentMaxLevel : level;
-            const currentTips = promptTipsByLevel[tipsLevel] || promptTipsByLevel[1];
-            tipsList.innerHTML = '';
-            currentTips.forEach(tip => {
-                const li = document.createElement('li');
-                li.textContent = tip;
-                tipsList.appendChild(li);
-            });
-        }
-
-        function parsePrompt(promptText) {
-            promptText = promptText.toLowerCase();
-            const result = { numbers: [], intent: null, keywords: [], isClear: false };
-            const numberMatches = promptText.match(/\d+/g);
-            if (numberMatches) result.numbers = numberMatches.map(Number);
-
-            if (promptText.includes('x') || promptText.includes('*') || promptText.includes('times') || promptText.includes('multiply') || promptText.includes('multiplied by')) {
-                result.intent = 'multiply';
+            function getDefaultMessageForState(state) { 
+                let userName = "Friend";
+                if (currentUser) {
+                    userName = currentUser.displayName ? currentUser.displayName.split(' ')[0] : currentUser.email.split('@')[0];
+                }
+                switch (state) {
+                    case 'thinking': return "Hmm, let me think...";
+                    case 'happy': return "You got it!";
+                    case 'confused': return "I'm a bit confused. Try rephrasing?";
+                    case 'correct': return "That's amazing!";
+                    case 'celebrate': return "Woohoo! That's awesome!";
+                    default: return `Hi ${userName}! Let's play!`;
+                }
             }
 
-            if (promptText.includes('quickly') || promptText.includes('fast')) result.keywords.push('quickly');
-            if (promptText.includes('super') || promptText.includes('magic')) result.keywords.push('magic');
-            if (promptText.includes('calculate') || promptText.includes('solve') || promptText.includes('what is')) result.keywords.push('solve_command');
-
-            if (result.intent === 'multiply' && result.numbers.length >= 2) {
-                if (currentProblem && typeof currentProblem.num1 !== 'undefined' && typeof currentProblem.num2 !== 'undefined') {
+            function generateProblem() { 
+                if (!currentUser) return; 
+                const currentMaxLevel = Object.keys(problemsByLevel).length;
+                if (level > currentMaxLevel) level = currentMaxLevel;
+                const levelProblems = problemsByLevel[level] || problemsByLevel[1];
+                const problemIndex = Math.floor(Math.random() * levelProblems.length);
+                currentProblem = levelProblems[problemIndex];
+                currentProblem.answer = currentProblem.num1 * currentProblem.num2;
+                let problemText = `Challenge: What is ${currentProblem.num1} x ${currentProblem.num2}?`;
+                if (currentProblem.story) { problemText = `Challenge: ${currentProblem.story} (This means ${currentProblem.num1} x ${currentProblem.num2}!)`; }
+                problemStatement.textContent = problemText;
+                feedbackArea.textContent = ""; promptInput.value = ""; userAnswerInput.value = "";
+                switchToPromptMode();
+                setCharacterState('idle'); 
+                updatePromptTips(); checkAchievements();
+            }
+            function updatePromptTips() { 
+                const currentMaxLevel = Object.keys(promptTipsByLevel).length;
+                let tipsLevel = level > currentMaxLevel ? currentMaxLevel : level;
+                const currentTips = promptTipsByLevel[tipsLevel] || promptTipsByLevel[1];
+                tipsList.innerHTML = '';
+                currentTips.forEach(tip => { const li = document.createElement('li'); li.textContent = tip; tipsList.appendChild(li); });
+            }
+            function parsePrompt(promptText) { 
+                promptText = promptText.toLowerCase();
+                const result = { numbers: [], intent: null, keywords: [], isClear: false };
+                const numberMatches = promptText.match(/\d+/g);
+                if (numberMatches) result.numbers = numberMatches.map(Number);
+                if (promptText.includes('x') || promptText.includes('*') || promptText.includes('times') || promptText.includes('multiply')) result.intent = 'multiply';
+                if (promptText.includes('quickly')) result.keywords.push('quickly');
+                if (promptText.includes('calculate') || promptText.includes('solve')) result.keywords.push('solve_command');
+                if (result.intent === 'multiply' && result.numbers.length >= 2 && currentProblem) {
                     const problemNums = [currentProblem.num1, currentProblem.num2].sort();
                     const promptNumsSorted = result.numbers.slice(0,2).sort();
-                    if (problemNums[0] === promptNumsSorted[0] && problemNums[1] === promptNumsSorted[1]) {
-                         result.isClear = true;
-                    }
-                } else { console.error("currentProblem not defined in parsePrompt"); }
-            }
-            return result;
-        }
-
-        function switchToAnswerMode() {
-            gameStage = 'answering';
-            promptInput.style.display = 'none';
-            userAnswerInput.style.display = 'block';
-            userAnswerInput.focus();
-            submitButton.textContent = 'Check My Answer!';
-        }
-
-        function switchToPromptMode() {
-            gameStage = 'prompting';
-            promptInput.style.display = 'block';
-            userAnswerInput.style.display = 'none';
-            promptInput.focus();
-            submitButton.textContent = 'Send Prompt!';
-        }
-
-        function handleSubmitPrompt() {
-            if (!currentProblem) { generateProblem(); return; }
-            const userPromptText = promptInput.value.trim();
-            if (!userPromptText) {
-                feedbackArea.textContent = "Please type a prompt for Digit!";
-                setCharacterState('confused', "You need to give me instructions!");
-                return;
-            }
-            setCharacterState('thinking');
-            feedbackArea.textContent = ""; 
-            const parsed = parsePrompt(userPromptText);
-            let promptFeedbackMessage = "";
-
-            if (!parsed.isClear || parsed.intent !== 'multiply') {
-                promptFeedbackMessage = "That prompt wasn't clear enough. ";
-                if (parsed.intent === 'multiply' && parsed.numbers.length < 2) {
-                    promptFeedbackMessage += `I need two numbers to multiply. Try 'solve ${currentProblem.num1} x ${currentProblem.num2}'.`;
-                } else if (parsed.intent !== 'multiply') {
-                    promptFeedbackMessage += `Are you asking me to multiply? Try using words like 'times' or 'x'.`;
-                } else { 
-                     promptFeedbackMessage += `Make sure you're asking about ${currentProblem.num1} and ${currentProblem.num2}. Example: 'Calculate ${currentProblem.num1} x ${currentProblem.num2}'.`;
+                    if (problemNums[0] === promptNumsSorted[0] && problemNums[1] === promptNumsSorted[1]) result.isClear = true;
                 }
-                setCharacterState('confused', promptFeedbackMessage);
-                feedbackArea.textContent = promptFeedbackMessage;
-                return;
+                return result;
+            }
+            function switchToAnswerMode() { 
+                gameStage = 'answering'; promptInput.style.display = 'none'; userAnswerInput.style.display = 'block';
+                userAnswerInput.focus(); submitButton.textContent = 'Check My Answer!';
+            }
+            function switchToPromptMode() { 
+                gameStage = 'prompting'; promptInput.style.display = 'block'; userAnswerInput.style.display = 'none';
+                promptInput.focus(); submitButton.textContent = 'Send Prompt!';
             }
 
-            successfulPrompts++;
-            score += 5; // Base points for a good prompt
-            if (parsed.keywords.length > 0) {
-                score += 2; // Bonus for using "power words"
-                promptFeedbackMessage = "Awesome prompt with power words! ";
-            } else {
-                promptFeedbackMessage = "Great prompt! Very clear. ";
-            }
-            
-            updateScoreDisplay();
-            feedbackArea.textContent = promptFeedbackMessage + "Now, what do YOU think the answer is?";
-            setCharacterState('thinking', promptFeedbackMessage + `What do you think ${currentProblem.num1} x ${currentProblem.num2} is?`);
-            switchToAnswerMode();
-            checkAchievements(); // Check for prompt-based achievements
-        }
-
-        function handleCheckAnswer() {
-            const userAnswerText = userAnswerInput.value.trim();
-            if (userAnswerText === "") {
-                feedbackArea.textContent = "Please type your answer!";
-                setCharacterState('confused', "Don't forget to type your answer!");
-                currentMathStreak = 0; // Reset streak
-                updateStreakDisplay();
-                return;
-            }
-            const userAnswer = parseInt(userAnswerText);
-
-            if (isNaN(userAnswer)) {
-                feedbackArea.textContent = "Please enter a number for your answer.";
-                setCharacterState('confused', "That doesn't look like a number. Try again!");
-                currentMathStreak = 0; // Reset streak
-                updateStreakDisplay();
-                return;
-            }
-
-            const correctAnswer = currentProblem.answer;
-            let resultMessage = "";
-            let isUserCorrect = userAnswer === correctAnswer;
-
-            if (isUserCorrect) {
-                correctMathAnswers++;
-                currentMathStreak++;
-                score += 10; // Points for correct math
-                let streakBonus = 0;
-                if (currentMathStreak >= 3) {
-                    streakBonus = currentMathStreak * 2; // Example: 3 in a row = +6, 4 in a row = +8
-                    score += streakBonus;
+            function handleSubmitPrompt() { 
+                if (!currentUser || !currentProblem) return;
+                const userPromptText = promptInput.value.trim();
+                if (!userPromptText) { feedbackArea.textContent = "Type a prompt!"; setCharacterState('confused'); return; }
+                setCharacterState('thinking'); feedbackArea.textContent = ""; 
+                const parsed = parsePrompt(userPromptText);
+                let promptFeedbackMessage = "";
+                if (!parsed.isClear || parsed.intent !== 'multiply') {
+                    promptFeedbackMessage = "Hmm, that prompt wasn't quite right for the problem. Try again!";
+                    setCharacterState('confused', promptFeedbackMessage); feedbackArea.textContent = promptFeedbackMessage; return;
                 }
-                resultMessage = `Yes! ${currentProblem.num1} x ${currentProblem.num2} = ${correctAnswer}! `;
-                if (streakBonus > 0) {
-                    resultMessage += `Streak Bonus: +${streakBonus} points! `;
+                successfulPrompts++; score += 5;
+                if (parsed.keywords.length > 0) { score += 2; promptFeedbackMessage = "Awesome power prompt! "; }
+                else { promptFeedbackMessage = "Great prompt! "; }
+                updateScoreDisplay();
+                feedbackArea.textContent = promptFeedbackMessage + "Now, what's the answer?";
+                setCharacterState('thinking', promptFeedbackMessage + `What is ${currentProblem.num1} x ${currentProblem.num2}?`);
+                switchToAnswerMode(); checkAchievements();
+            }
+
+            function handleCheckAnswer() { 
+                if (!currentUser || !currentProblem) return;
+                const userAnswerText = userAnswerInput.value.trim();
+                if (userAnswerText === "") { feedbackArea.textContent = "Type your answer!"; setCharacterState('confused'); currentMathStreak = 0; updateStreakDisplay(); return; }
+                const userAnswer = parseInt(userAnswerText);
+                if (isNaN(userAnswer)) { feedbackArea.textContent = "Enter a number."; setCharacterState('confused'); currentMathStreak = 0; updateStreakDisplay(); return; }
+                const correctAnswer = currentProblem.answer;
+                let resultMessage = ""; let isUserCorrect = userAnswer === correctAnswer;
+                if (isUserCorrect) {
+                    correctMathAnswers++; currentMathStreak++; score += 10;
+                    let streakBonus = (currentMathStreak >= 3) ? currentMathStreak * 2 : 0;
+                    if (streakBonus > 0) score += streakBonus;
+                    resultMessage = `Yes! ${currentProblem.num1} x ${currentProblem.num2} = ${correctAnswer}! `;
+                    if (streakBonus > 0) resultMessage += `Streak Bonus: +${streakBonus}! `;
+                    setCharacterState('correct', `Amazing! ${correctAnswer} is right!`);
+                } else {
+                    currentMathStreak = 0;
+                    resultMessage = `Almost! Answer is ${correctAnswer}. Prompt was good!`;
+                    setCharacterState('happy', `Good try! It's ${correctAnswer}.`);
                 }
-                setCharacterState('correct', `Amazing! ${correctAnswer} is right! You earned points!`);
-            } else {
-                currentMathStreak = 0; // Reset streak
-                resultMessage = `Almost! The correct answer to ${currentProblem.num1} x ${currentProblem.num2} is ${correctAnswer}. Your prompt was excellent, though! Keep practicing the tables!`;
-                setCharacterState('happy', `Good try! The answer is ${correctAnswer}. Your prompt was great!`);
-            }
-            feedbackArea.textContent = resultMessage;
-            updateScoreDisplay();
-            updateStreakDisplay();
-            checkTableMasterAchievements(isUserCorrect); // Check for table-specific achievements
-            checkAchievements(); // Check general achievements
-
-            const currentMaxLevel = Object.keys(problemsByLevel).length;
-            const oldLevel = level;
-            if (score >= level * 50 && level < currentMaxLevel) { // Level up condition based on score (e.g. L1->L2 at 50, L2->L3 at 100 etc)
-                level++;
-            } else if (score >= level * 50 + (level-currentMaxLevel)*50 && level === currentMaxLevel) { // Allow "virtual" leveling past max for continued scoring feel
-                 // No actual level increase, but can add a message
+                feedbackArea.textContent = resultMessage; updateScoreDisplay(); updateStreakDisplay(); checkAchievements();
+                const oldLevel = level;
+                if (score >= level * 50 && level < Object.keys(problemsByLevel).length) level++;
+                if (level > oldLevel) {
+                    setTimeout(() => { 
+                        feedbackArea.textContent += ` 🎉 LEVEL UP! Level ${level}! 🎉`;
+                        setCharacterState('celebrate', `Woohoo! LEVEL ${level}!`); updatePromptTips(); checkAchievements();
+                    }, 1500);
+                }
+                setTimeout(() => { generateProblem(); }, 4500);
             }
 
+            // Event Listeners
+            submitButton.addEventListener('click', () => {
+                if (!currentUser) { authErrorDiv.textContent = "Please sign in to play."; return; }
+                if (gameStage === 'prompting') handleSubmitPrompt();
+                else if (gameStage === 'answering') handleCheckAnswer();
+            });
+            promptInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && gameStage === 'prompting' && currentUser) handleSubmitPrompt(); });
+            userAnswerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && gameStage === 'answering' && currentUser) handleCheckAnswer(); });
+            promptTipsButton.addEventListener('click', () => { tipsModal.style.display = 'flex'; });
+            closeModalButton.addEventListener('click', () => { tipsModal.style.display = 'none'; });
+            window.addEventListener('click', (e) => { if (e.target === tipsModal) tipsModal.style.display = 'none'; });
 
-            if (level > oldLevel) {
-                 setTimeout(() => { 
-                    feedbackArea.textContent += ` 🎉 LEVEL UP! You reached Level ${level}! 🎉`;
-                    setCharacterState('celebrate', `Woohoo! LEVEL ${level}! You're a Prompt Powerhouse!`);
-                    updatePromptTips();
-                    checkAchievements(); // Check for level up achievement
-                }, 1500);
-            } else if (level >= currentMaxLevel && score % 75 === 0 && score > (currentMaxLevel*50)) { // Special message for high scores at max level
-                 setTimeout(() => {
-                    feedbackArea.textContent += ` You're a Times Table Titan at Level ${level}! Score: ${score}!`;
-                    setCharacterState('celebrate', `Awesome! You're mastering the game!`);
-                }, 1500);
-            }
-
-            setTimeout(() => {
-                generateProblem(); 
-            }, 4500); 
-        }
-
-        submitButton.addEventListener('click', () => {
-            if (gameStage === 'prompting') handleSubmitPrompt();
-            else if (gameStage === 'answering') handleCheckAnswer();
-        });
-        promptInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && gameStage === 'prompting') handleSubmitPrompt(); });
-        userAnswerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && gameStage === 'answering') handleCheckAnswer(); });
-        promptTipsButton.addEventListener('click', () => { tipsModal.style.display = 'flex'; });
-        closeModalButton.addEventListener('click', () => { tipsModal.style.display = 'none'; });
-        window.addEventListener('click', (e) => { if (e.target === tipsModal) tipsModal.style.display = 'none'; });
-
-        // Initial setup
-        generateProblem(); 
-        updateScoreDisplay();
-        updateStreakDisplay();
+        }); // End DOMContentLoaded
     </script>
 </body>
 </html>
